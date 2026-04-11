@@ -1,0 +1,63 @@
+{
+  "_comment": "Keys = Album Number from TS Data.csv. gradientTop/Bottom: CSS colors. darkMode: true = dark cards/text for dark gradients.",
+  "1": {
+    "gradientTop": "#283C34",
+    "gradientBottom": "#5493A3",
+    "darkMode": true
+  },
+  "2": {
+    "gradientTop": "#DEC177",
+    "gradientBottom": "#E9E1D6",
+    "darkMode": false
+  },
+  "3": {
+    "gradientTop": "#D0242A",
+    "gradientBottom": "#E7C9C9",
+    "darkMode": true
+  },
+  "4": {
+    "gradientTop": "#AD143D",
+    "gradientBottom": "#464751",
+    "darkMode": true
+  },
+  "5": {
+    "gradientTop": "#EFCFAF",
+    "gradientBottom": "#907181",
+    "darkMode": false
+  },
+  "6": {
+    "gradientTop": "#000000",
+    "gradientBottom": "#474747",
+    "darkMode": true
+  },
+  "7": {
+    "gradientTop": "#EAA5D1",
+    "gradientBottom": "#78BDDD",
+    "darkMode": false
+  },
+  "8": {
+    "gradientTop": "#E7E7E7",
+    "gradientBottom": "#727272",
+    "darkMode": false
+  },
+  "9": {
+    "gradientTop": "#9A897F",
+    "gradientBottom": "#322129",
+    "darkMode": true
+  },
+  "10": {
+    "gradientTop": "#A1A1A1",
+    "gradientBottom": "#2E2136",
+    "darkMode": true
+  },
+  "11": {
+    "gradientTop": "#7DB99C",
+    "gradientBottom": "#132115",
+    "darkMode": true
+  },
+  "12": {
+    "gradientTop": "#312C28",
+    "gradientBottom": "#7F7F7F",
+    "darkMode": true
+  }
+}

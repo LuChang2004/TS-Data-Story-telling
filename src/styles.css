@@ -1,0 +1,1133 @@
+:root {
+  /* Overridden per album via JS from `public/data/album-themes.json` */
+  --page-gradient-top: #f5f4f8;
+  --page-gradient-bottom: #ebe8f2;
+  --bg: #f5f4f8;
+  --surface: #ffffff;
+  --surface2: #eceaf1;
+  --text: #1a1628;
+  --muted: #5c566f;
+  --accent: #b8860b;
+  --accent2: #b84d7a;
+  --line: rgba(26, 22, 40, 0.1);
+  --radius: 12px;
+  --timeline-h: 118px;
+  --timeline-heading-h: 2.75rem;
+  --timeline-axis-y: calc(0.35rem + var(--timeline-heading-h) + 0.2rem + 4px);
+  /* Main grid + fixed Analysis column (2nd & 3rd ~ same width). */
+  --col-album-w: 340px;
+  --col-narrative-w: 590px;
+  --viz-dock-w: 590px;
+  --era-grid-gap: 1.25rem;
+  --cover-size: 220px;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/**
+ * All scrollable areas: lighter thumb/track + frosted glass on WebKit
+ * (Firefox uses scrollbar-color only; no backdrop on scrollbar parts there).
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 14%, transparent)
+    color-mix(in srgb, var(--text) 3.5%, transparent);
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  border-radius: 999px;
+  backdrop-filter: blur(10px) saturate(1.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  backdrop-filter: blur(14px) saturate(1.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 26%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-thumb {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  /* color-scheme set from JS with theme blend */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    var(--page-gradient-top) 0%,
+    var(--page-gradient-bottom) 100%
+  );
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.timeline {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: var(--timeline-h);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0.5rem 1.25rem 0.4rem;
+  background: transparent;
+  border-bottom: none;
+  isolation: isolate;
+}
+
+.timeline > nav {
+  width: 100%;
+  min-width: 0;
+}
+
+/**
+ * Progressive frosted glass: single strong backdrop-blur, masked so the effect
+ * reads strongest at the top edge and fades toward the bottom of the bar.
+ */
+.timeline::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+}
+
+.timeline-track {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  gap: 0;
+  margin: 0;
+  padding: 0.35rem 0 0.45rem;
+  list-style: none;
+  overflow-x: auto;
+}
+
+/* Full-width horizontal axis through dot centers (uses theme --line). */
+.timeline-track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--timeline-axis-y);
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.timeline-era-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  min-width: 0;
+  list-style: none;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-era-block:not(:last-child) {
+  border-right: 1px solid var(--line);
+}
+
+.timeline-era-heading {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  height: var(--timeline-heading-h);
+  margin: 0;
+  padding: 0 0.35rem;
+  box-sizing: border-box;
+  font-family: var(--font-display);
+  font-size: clamp(0.72rem, 0.9vw + 0.52rem, 0.92rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: var(--text);
+  opacity: 0.72;
+  word-break: break-word;
+}
+
+.timeline-era-block.has-active .timeline-era-heading {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.timeline-era-albums {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.timeline-era-albums > li {
+  flex: 1 1 0;
+  min-width: 0;
+  list-style: none;
+}
+
+.timeline-item {
+  width: 100%;
+  min-width: 64px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  padding: 0 0.35rem 0.4rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: color 0.2s;
+}
+
+.timeline-item::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  height: 2px;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.timeline-item:hover .timeline-label {
+  color: var(--text);
+}
+
+.timeline-item.is-active {
+  color: var(--accent);
+}
+
+.timeline-item.is-active::after {
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+}
+
+.timeline-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 0 auto 4px;
+  border-radius: 50%;
+  background: var(--page-gradient-top);
+  border: 1px solid var(--line);
+  box-sizing: border-box;
+}
+
+.timeline-item.is-active .timeline-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.timeline-label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.92;
+  margin: 0;
+}
+
+.timeline-item.is-active .timeline-label {
+  color: var(--text);
+  opacity: 1;
+}
+
+.timeline-year {
+  display: block;
+  font-size: 0.54rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: 0.85;
+  margin-top: 1px;
+}
+
+.era {
+  min-height: calc(100vh - var(--timeline-h));
+  scroll-margin-top: var(--timeline-h);
+}
+
+.era-parallax {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.era-grid {
+  display: grid;
+  /* Below ~1650px viewport, fixed album+narrative + dock padding overflows — use flexible tracks. */
+  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
+  gap: var(--era-grid-gap);
+  padding: 1.25rem calc(var(--viz-dock-w) + 1.75rem) 2rem 1.25rem;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-left: 1.25rem;
+  margin-right: 0;
+  min-height: calc(100vh - var(--timeline-h));
+  align-items: stretch;
+  justify-items: start;
+}
+
+@media (min-width: 1650px) {
+  .era-grid {
+    grid-template-columns: var(--col-album-w) var(--col-narrative-w);
+    width: max-content;
+    max-width: min(
+      100%,
+      calc(
+        var(--col-album-w) + var(--era-grid-gap) + var(--col-narrative-w) +
+          1.75rem + var(--viz-dock-w) + 2.5rem
+      )
+    );
+  }
+}
+
+@media (max-width: 1200px) {
+  .era-grid {
+    margin-left: 1rem;
+    margin-right: 1rem;
+    padding-right: calc(var(--viz-dock-w) + 1rem);
+  }
+}
+
+@media (max-width: 1024px) {
+  .era-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 1.25rem 1.25rem min(44vh, 380px);
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+  }
+}
+
+.col {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.col-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+/**
+ * Album + narrative headers: same progressive frosted blur as `.timeline::before`
+ * (strongest at the top, fades toward the bottom). No divider line.
+ */
+.col-album .col-title,
+.col-narrative .col-title {
+  position: relative;
+  border-bottom: none;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.col-album .col-title::before,
+.col-narrative .col-title::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .col-album .col-title::before,
+  .col-narrative .col-title::before {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+.narrative-scroll {
+  flex: 1;
+  align-self: stretch;
+  text-align: left;
+  overflow-y: auto;
+  padding: 1rem 1.1rem 1.25rem;
+  overscroll-behavior: contain;
+  max-height: calc(100vh - var(--timeline-h) - 52px);
+}
+
+.narrative-scroll p {
+  margin: 0 0 1rem;
+  color: var(--text);
+  opacity: 0.92;
+}
+
+.narrative-figure {
+  margin: 0 0 1rem;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.narrative-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.narrative-figure figcaption {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.album-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  text-align: left;
+  padding: 1rem;
+  gap: 1rem;
+  overflow-y: auto;
+  max-height: calc(100vh - var(--timeline-h) - 52px);
+}
+
+.cover-wrap {
+  width: min(var(--cover-size), 100%);
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  background: transparent;
+}
+
+.cover-wrap img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.track-row {
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.track-row:last-child {
+  border-bottom: none;
+}
+
+.track-btn {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.45rem 0.6rem;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.track-btn:hover,
+.track-btn:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  outline: none;
+}
+
+.track-idx {
+  flex: 0 0 1.5rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.track-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.viz-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.experience-foot {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.experience-album-context {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.experience-hint {
+  display: inline-block;
+  margin-top: 0.35rem;
+}
+
+.viz-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem 1rem 1rem;
+  min-height: 0;
+  max-height: calc(100vh - var(--timeline-h) - 52px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Analysis dock: no internal scroll; chords + instrumentation share viewport height */
+.viz-dock .viz-body.viz-dock-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.65rem;
+}
+
+.viz-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.35rem;
+}
+
+.chord-list {
+  flex: 1;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.viz-dock .chord-list--fixed {
+  flex: 0 0 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(2.4rem, auto));
+  gap: 0.35rem;
+  align-content: start;
+}
+
+.viz-dock .viz-chord-block .viz-section-title {
+  margin-bottom: 0.25rem;
+}
+
+.chord-row--empty {
+  pointer-events: none;
+}
+
+.chord-row--empty .chord-name,
+.chord-row--empty .chord-val {
+  opacity: 0;
+}
+
+.chord-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(80px, 38%);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chord-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chord-bar-wrap {
+  height: 8px;
+  background: transparent;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.chord-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width 0.12s ease-out;
+}
+
+.chord-val {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.inst-strip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding-top: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.inst-card {
+  flex: 0 0 auto;
+  width: 56px;
+  min-width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.inst-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  line-height: 1;
+}
+
+.inst-icon-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  display: block;
+  transition: filter 0.35s ease;
+}
+
+/* Dark album themes (`album-themes.json` darkMode): lighten line-art PNGs */
+:root[data-icon-invert="1"] .inst-icon-img {
+  filter: invert(1);
+}
+
+.inst-icon-fallback {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.inst-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inst-bar-col {
+  width: 100%;
+  height: 72px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.inst-bar {
+  width: 100%;
+  max-width: 40px;
+  min-height: 2px;
+  border-radius: 0;
+  background: var(--text);
+  opacity: 0.72;
+}
+
+.inst-card-rank .inst-bar {
+  max-width: 10px;
+}
+
+.inst-pct {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* Fixed third column: scroll-driven crossfade between albums */
+.viz-dock {
+  position: fixed;
+  z-index: 12;
+  top: var(--timeline-h);
+  right: 1rem;
+  width: var(--viz-dock-w);
+  height: calc(100vh - var(--timeline-h) - 1rem);
+  max-height: calc(100vh - var(--timeline-h) - 1rem);
+  box-sizing: border-box;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.viz-dock-panel {
+  pointer-events: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: var(--line);
+}
+
+.viz-inst-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+}
+
+.viz-dock .viz-inst-section .viz-section-title {
+  flex-shrink: 0;
+  margin-bottom: 0.2rem;
+}
+
+.inst-rank-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 0.1rem;
+}
+
+/* Per-instrument morph between album ranks (JS sets left % + opacity). */
+.inst-rank-morph-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.inst-card-rank-morph {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% / 6);
+  height: auto;
+  box-sizing: border-box;
+  padding: 0 0.08rem;
+  will-change: left, opacity;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.viz-dock .inst-card-rank-morph .inst-bar-col {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.viz-dock .inst-card-rank-morph .inst-bar {
+  min-height: 2px;
+}
+
+.viz-dock .inst-card-rank-morph.inst-card-rank {
+  width: calc(100% / 6);
+  min-width: 0;
+  max-width: none;
+  flex: initial;
+}
+
+.viz-dock .inst-card-rank {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: initial;
+}
+
+.viz-dock .viz-dock-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.viz-dock .viz-dock-stack {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  min-height: 0;
+}
+
+.viz-dock-panel > .col-title {
+  flex-shrink: 0;
+}
+
+.viz-blend-layer {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  will-change: opacity;
+}
+
+@media (max-width: 1024px) {
+  .viz-dock {
+    top: auto;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    right: 0.65rem;
+    width: auto;
+    height: min(42vh, 420px);
+    max-height: min(42vh, 420px);
+  }
+}
+
+.loading,
+.error {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.error {
+  color: #b42318;
+}
+
+.song-popover-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.song-popover-root.is-visible {
+  pointer-events: auto;
+}
+
+.song-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 22, 40, 0.25);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.song-popover-root.is-visible .song-popover-backdrop {
+  opacity: 1;
+}
+
+.song-popover-panel {
+  position: fixed;
+  z-index: 101;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(72vh, 520px);
+  overflow: auto;
+  padding: 1rem 1.1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(26, 22, 40, 0.15);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.song-popover-panel.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.song-popover-head {
+  margin-bottom: 0.65rem;
+}
+
+.song-popover-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.song-popover-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.song-popover-facts {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.song-popover-facts div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.song-popover-facts dt {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.song-popover-facts dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.song-popover-section {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pop-inst-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+.pop-inst-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.pop-inst-icon .inst-icon-img {
+  width: 22px;
+  height: 22px;
+}
+
+.pop-inst-meta {
+  min-width: 0;
+}
+
+.pop-inst-name {
+  font-size: 0.78rem;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+  word-break: break-word;
+}
+
+.pop-inst-bar-wrap {
+  height: 6px;
+  background: transparent;
+  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.pop-inst-bar {
+  height: 100%;
+  border-radius: 0;
+  background: var(--text);
+  opacity: 0.72;
+}
+
+.pop-inst-pct {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-unlock-hint {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 2rem));
+  padding: 0.55rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--text) 8%, transparent);
+  pointer-events: none;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}

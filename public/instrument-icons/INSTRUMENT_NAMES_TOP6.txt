@@ -1,0 +1,17 @@
+# Instruments that can appear in the Analysis column top-6 (union across all albums).
+# Same logic as src/aggregate.ts instrumentationRanking + src/vizRender.ts VIZ_INSTRUMENT_RANK_SHOW.
+# Regenerate: npm run instruments:top6
+AcousticGuitar
+Banjo
+Bass
+DrumMachine
+Drums
+ElectricGuitar
+ElectronicDrums
+Fiddle
+Guitar
+Keyboard
+Piano
+Strings
+Synth
+Vocals

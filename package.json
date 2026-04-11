@@ -1,0 +1,22 @@
+{
+  "name": "ts-data-story-telling",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "instruments:list": "tsx scripts/extract-instrument-names.ts",
+    "instruments:top6": "tsx scripts/instruments-top6-scope.ts",
+    "instruments:translate-csv": "node scripts/translate-instrument-csv.mjs"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "papaparse": "^5.5.2"
+  }
+}

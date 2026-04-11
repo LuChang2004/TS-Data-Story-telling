@@ -1,0 +1,15 @@
+# Canonical instrument names (after cleaning). One per line.
+# Source: TS Data.csv → src/instrumentNames.ts → parseInstrumentationString
+# PNG: public/instrument-icons/{encodeURIComponent(name)}.png
+# Regenerate: npm run instruments:list
+AcousticGuitar
+Banjo
+Bass
+Brass
+Drums
+ElectricGuitar
+Piano
+Samples
+Strings
+Synth
+Vocals
