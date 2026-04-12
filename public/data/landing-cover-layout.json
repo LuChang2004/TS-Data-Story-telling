@@ -1,0 +1,5 @@
+{
+  "_readme": "Landing hero: set byAlbumNumber['1']..'12' (CSV album numbers). Optional fields per album: ax, ay (unit direction from center, about -1..1), rad (distance factor ~0.12-0.42), rotDeg (degrees), scale (0.45-0.95), z (stacking). Omitted fields use the built-in golden-angle scatter. Example for one album: {\"6\": {\"ax\": 0.2, \"ay\": -0.9, \"rad\": 0.35, \"rotDeg\": 8, \"scale\": 0.58, \"z\": 6}}",
+  "byAlbumNumber": {
+  }
+}

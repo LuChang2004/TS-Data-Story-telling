@@ -51,13 +51,13 @@
     "darkMode": true
   },
   "11": {
-    "gradientTop": "#7DB99C",
-    "gradientBottom": "#132115",
+    "gradientTop": "#312C28",
+    "gradientBottom": "#7F7F7F",
     "darkMode": true
   },
   "12": {
-    "gradientTop": "#312C28",
-    "gradientBottom": "#7F7F7F",
+    "gradientTop": "#7DB99C",
+    "gradientBottom": "#132115",
     "darkMode": true
   }
 }

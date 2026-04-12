@@ -18,6 +18,9 @@
   --col-album-w: 340px;
   --col-narrative-w: 590px;
   --viz-dock-w: 590px;
+  /* Same visible height as fixed Analysis column (below timeline). */
+  --analysis-dock-gap: 1rem;
+  --analysis-panel-h: calc(100vh - var(--timeline-h) - var(--analysis-dock-gap));
   --era-grid-gap: 1.25rem;
   --cover-size: 220px;
   --font-sans: "DM Sans", system-ui, sans-serif;
@@ -82,30 +85,176 @@ html {
   /* color-scheme set from JS with theme blend */
 }
 
+/**
+ * Viewport-locked page gradient (not tied to document scroll). JS updates
+ * `--page-gradient-*` on `documentElement`; this layer stays fixed while content
+ * (including era parallax) moves over it.
+ */
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(
-    180deg,
-    var(--page-gradient-top) 0%,
-    var(--page-gradient-bottom) 100%
-  );
-  background-attachment: fixed;
+  position: relative;
+  background: transparent;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--page-gradient-top) 0%,
+    var(--page-gradient-bottom) 100%
+  );
+}
+
 #app {
   min-height: 100vh;
 }
 
-.timeline {
+/* --- Landing hero: scattered covers + title; scroll drives outward motion --- */
+.landing-hero {
+  position: relative;
+  z-index: 15;
+  height: 210vh;
+  min-height: 56rem;
+  margin: 0;
+  pointer-events: none;
+}
+
+.landing-hero__sticky {
   position: sticky;
   top: 0;
+  height: 100vh;
+  min-height: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 4rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.landing-hero__covers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.landing-cover {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: clamp(56px, 10.5vw, 130px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  transform-origin: center center;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.26),
+    0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
+  will-change: transform, opacity;
+}
+
+.landing-hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 88% 72% at 50% 44%,
+    rgba(255, 255, 255, 0.58) 0%,
+    rgba(252, 250, 255, 0.28) 42%,
+    rgba(248, 245, 252, 0.06) 100%
+  );
+  opacity: 0.55;
+}
+
+.landing-hero__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 36rem;
+  padding: 0 1rem;
+  pointer-events: none;
+}
+
+.landing-hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw + 0.5rem, 2.9rem);
+  font-weight: 700;
+  line-height: 1.12;
+  margin: 0 0 0.75rem;
+  color: var(--text);
+  text-shadow:
+    0 0 1.25rem rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.landing-hero__sub {
+  margin: 0;
+  font-size: clamp(0.9rem, 1.15vw + 0.55rem, 1.08rem);
+  line-height: 1.55;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.landing-hero__hint {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .landing-hero {
+    height: 195vh;
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cover {
+    will-change: auto;
+  }
+}
+
+/**
+ * Reserves the same vertical gap the fixed `.timeline` would occupy in flow,
+ * so main / era grids align with `scroll-margin-top` and viz-dock `top`.
+ */
+.timeline-spacer {
+  height: var(--timeline-h);
+  flex-shrink: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.timeline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
-  min-height: var(--timeline-h);
+  /* Height comes from content; `--timeline-h` is set from measured `offsetHeight` in JS. */
+  min-height: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -115,6 +264,29 @@ body {
   background: transparent;
   border-bottom: none;
   isolation: isolate;
+  opacity: 0;
+  transform: translateY(-14px);
+  pointer-events: none;
+  transition:
+    opacity 1.15s ease-out,
+    transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.landing-past .timeline {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline {
+    transition: opacity 0.4s ease;
+    transform: none;
+  }
+
+  body.landing-past .timeline {
+    transform: none;
+  }
 }
 
 .timeline > nav {
@@ -326,33 +498,63 @@ body {
 }
 
 .era {
-  min-height: calc(100vh - var(--timeline-h));
+  /* Taller than the sticky panel so the page keeps scrolling while cols 1–2 stay pinned under the nav. */
+  min-height: calc(var(--analysis-panel-h) + 38vh);
+  padding-bottom: 2rem;
   scroll-margin-top: var(--timeline-h);
+  overflow-anchor: none;
+}
+
+/**
+ * Sticky shell: pins under the fixed timeline (same top offset as Analysis).
+ * No transform here — otherwise `position: sticky` on descendants would break.
+ */
+.era-grid {
+  position: sticky;
+  top: var(--timeline-h);
+  z-index: 11;
+  height: var(--analysis-panel-h);
+  max-height: var(--analysis-panel-h);
+  box-sizing: border-box;
+  /* No padding-top: top edge aligns with fixed `.viz-dock` (Analysis outer top). */
+  padding: 0 calc(var(--viz-dock-w) + 1.75rem) var(--analysis-dock-gap) 1.25rem;
+  margin-left: 1.25rem;
+  margin-right: 0;
+  width: auto;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  align-items: stretch;
 }
 
 .era-parallax {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
+  gap: var(--era-grid-gap);
+  align-items: stretch;
+  justify-items: start;
+  /* Mobile: breathing room inside `.era-grid` padding. Desktop: must be 0 so col tops
+     line up with fixed `.viz-dock-panel` (Analysis) — dock has no equivalent inset. */
+  padding-top: 1.25rem;
   will-change: transform;
   backface-visibility: hidden;
 }
 
-.era-grid {
-  display: grid;
-  /* Below ~1650px viewport, fixed album+narrative + dock padding overflows — use flexible tracks. */
-  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
-  gap: var(--era-grid-gap);
-  padding: 1.25rem calc(var(--viz-dock-w) + 1.75rem) 2rem 1.25rem;
-  width: auto;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin-left: 1.25rem;
-  margin-right: 0;
-  min-height: calc(100vh - var(--timeline-h));
-  align-items: stretch;
-  justify-items: start;
+@media (min-width: 1025px) {
+  .era-parallax {
+    padding-top: 0;
+    /* Parallax JS sets translate3d; keep layer hint for smooth scroll. */
+    will-change: transform;
+    backface-visibility: hidden;
+  }
 }
 
 @media (min-width: 1650px) {
-  .era-grid {
+  .era-parallax {
     grid-template-columns: var(--col-album-w) var(--col-narrative-w);
     width: max-content;
     max-width: min(
@@ -374,14 +576,29 @@ body {
 }
 
 @media (max-width: 1024px) {
+  .era {
+    min-height: 0;
+    padding-bottom: 0;
+  }
+
   .era-grid {
-    grid-template-columns: 1fr;
-    min-height: auto;
+    position: relative;
+    top: auto;
+    z-index: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     padding: 1.25rem 1.25rem min(44vh, 380px);
     width: auto;
     margin-left: auto;
     margin-right: auto;
     max-width: 100%;
+  }
+
+  .era-parallax {
+    flex: none;
+    grid-template-columns: 1fr;
+    min-height: 0;
   }
 }
 
@@ -406,11 +623,14 @@ body {
 }
 
 /**
- * Album + narrative headers: same progressive frosted blur as `.timeline::before`
- * (strongest at the top, fades toward the bottom). No divider line.
+ * Album, narrative, and Analysis headers: same progressive frosted blur as `.timeline::before`
+ * (strongest at the top, fades toward the bottom). No divider under title — matches column alignment.
  */
 .col-album .col-title,
-.col-narrative .col-title {
+.col-narrative .col-title,
+.viz-dock-panel > .col-title {
+  margin: 0;
+  flex-shrink: 0;
   position: relative;
   border-bottom: none;
   isolation: isolate;
@@ -418,7 +638,8 @@ body {
 }
 
 .col-album .col-title::before,
-.col-narrative .col-title::before {
+.col-narrative .col-title::before,
+.viz-dock-panel > .col-title::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -444,20 +665,21 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .col-album .col-title::before,
-  .col-narrative .col-title::before {
+  .col-narrative .col-title::before,
+  .viz-dock-panel > .col-title::before {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 }
 
 .narrative-scroll {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   align-self: stretch;
   text-align: left;
   overflow-y: auto;
   padding: 1rem 1.1rem 1.25rem;
   overscroll-behavior: contain;
-  max-height: calc(100vh - var(--timeline-h) - 52px);
 }
 
 .narrative-scroll p {
@@ -489,7 +711,8 @@ body {
 }
 
 .album-body {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -498,7 +721,7 @@ body {
   padding: 1rem;
   gap: 1rem;
   overflow-y: auto;
-  max-height: calc(100vh - var(--timeline-h) - 52px);
+  overscroll-behavior: contain;
 }
 
 .cover-wrap {
@@ -621,7 +844,7 @@ body {
   gap: 1rem;
   padding: 0.75rem 1rem 1rem;
   min-height: 0;
-  max-height: calc(100vh - var(--timeline-h) - 52px);
+  max-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -811,12 +1034,43 @@ body {
   top: var(--timeline-h);
   right: 1rem;
   width: var(--viz-dock-w);
-  height: calc(100vh - var(--timeline-h) - 1rem);
-  max-height: calc(100vh - var(--timeline-h) - 1rem);
+  height: var(--analysis-panel-h);
+  max-height: var(--analysis-panel-h);
   box-sizing: border-box;
   pointer-events: none;
   display: flex;
   flex-direction: column;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 1.12s ease-out,
+    transform 1.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body:not(.landing-past) .viz-dock {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
+body.landing-past .viz-dock {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viz-dock {
+    transition: opacity 0.4s ease;
+    transform: none;
+  }
+
+  body:not(.landing-past) .viz-dock {
+    transform: none;
+  }
+
+  body.landing-past .viz-dock {
+    transform: none;
+  }
 }
 
 .viz-dock-panel {
@@ -831,6 +1085,284 @@ body {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border-color: var(--line);
+}
+
+.viz-dock-toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.viz-dock-tab {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.38rem 0.5rem;
+  cursor: pointer;
+}
+
+.viz-dock-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.viz-dock-tab[aria-selected="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.viz-mode-panel--hidden {
+  display: none !important;
+}
+
+.viz-dock .viz-mode-panel[data-viz-panel="musical"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  gap: 0.5rem;
+}
+
+.viz-dock .viz-mode-panel[data-viz-panel="achievement"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.viz-ach-stack {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.viz-ach-block {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.viz-ach-block .viz-section-title {
+  margin: 0;
+  padding: 0;
+  line-height: 1.25;
+  flex-shrink: 0;
+}
+
+/**
+ * Host sits below the section title; padding-top is the real gap (flex gap was dwarfed
+ * when the SVG was taller than the cell and `flex-end` let it overflow upward).
+ */
+.viz-ach-svg-host {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 1.125rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/** Clips and sizes the chart; SVG is absolutely positioned so it cannot paint over the title. */
+.viz-ach-svg-slot {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viz-ach-svg-slot > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  color: var(--text);
+}
+
+.viz-ach-svg-slot > .viz-empty {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0 0.35rem;
+  text-align: center;
+  align-self: center;
+}
+
+.viz-ach-svg {
+  color: var(--text);
+}
+
+.viz-ach-grid {
+  opacity: 0.35;
+}
+
+.viz-ach-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+@keyframes vizAchLabelIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vizAchDotIn {
+  from {
+    opacity: 0;
+    transform: scale(0.22);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes vizAchBarGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes vizAchGridIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+
+.viz-ach-svg--enter .viz-ach-grid {
+  opacity: 0;
+  animation: vizAchGridIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.viz-ach-svg--enter .viz-ach-axis {
+  opacity: 0;
+  animation: vizAchLabelIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.08s;
+}
+
+.viz-ach-svg--enter .viz-ach-xlabel {
+  opacity: 0;
+  animation: vizAchLabelIn 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--ach-d, 0s);
+}
+
+.viz-ach-svg--enter .viz-ach-line-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vizAchDotIn 0.52s cubic-bezier(0.34, 1.12, 0.64, 1) both;
+  animation-delay: var(--ach-dot-d, 0.28s);
+}
+
+.viz-ach-svg--enter .viz-ach-bar-group > rect {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: vizAchBarGrow 0.62s cubic-bezier(0.34, 1.08, 0.64, 1) both;
+  animation-delay: var(--viz-ach-d, 0s);
+}
+
+.viz-ach-svg--enter .viz-ach-bar-group > rect:nth-child(2) {
+  animation-delay: calc(var(--viz-ach-d, 0s) + 0.05s);
+}
+
+.viz-ach-svg--enter .viz-ach-legend {
+  opacity: 0;
+  animation: vizAchLabelIn 0.4s ease forwards;
+  animation-delay: 0.22s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viz-ach-svg--enter .viz-ach-grid,
+  .viz-ach-svg--enter .viz-ach-axis,
+  .viz-ach-svg--enter .viz-ach-xlabel,
+  .viz-ach-svg--enter .viz-ach-line-dot,
+  .viz-ach-svg--enter .viz-ach-bar-group > rect,
+  .viz-ach-svg--enter .viz-ach-legend {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .viz-ach-svg--enter .viz-ach-grid {
+    opacity: 0.35 !important;
+  }
+}
+
+.viz-ach-line-path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.viz-ach-line-dot {
+  fill: var(--accent);
+  stroke: var(--page-gradient-top);
+  stroke-width: 1.5;
+}
+
+.viz-ach-bar-wins {
+  fill: var(--accent);
+}
+
+.viz-ach-bar-noms {
+  fill: var(--text);
+  opacity: 0.36;
+}
+
+.viz-ach-bar-empty {
+  fill: var(--line);
+}
+
+.viz-ach-axis,
+.viz-ach-xlabel,
+.viz-ach-legend-t {
+  fill: var(--muted);
+}
+
+.viz-ach-axis {
+  font-size: 9px;
+}
+
+.viz-ach-xlabel {
+  font-size: 7.5px;
+}
+
+.viz-ach-legend-t {
+  font-size: 8px;
 }
 
 .viz-inst-section {
@@ -920,10 +1452,6 @@ body {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
   min-height: 0;
-}
-
-.viz-dock-panel > .col-title {
-  flex-shrink: 0;
 }
 
 .viz-blend-layer {

@@ -1,6 +1,15 @@
 import { wireInstrumentIconFallbacks } from "./instrumentIcons";
-import { getVizScrollBlend } from "./scrollTheme";
+import {
+  getVizScrollBlend,
+  getEraIndexForViewportRef,
+  isViewportEraStuckOnDesktop,
+} from "./scrollTheme";
+import type { AlbumAchievement } from "./tsAchievementCsv";
 import type { AlbumBundle } from "./types";
+import {
+  buildAchievementPaintPoints,
+  paintAchievementCharts,
+} from "./vizAchievementCharts";
 import {
   instrumentBarDisplayHeightPercent,
   instrumentRankCardInnerMarkup,
@@ -40,13 +49,17 @@ function applyMorphCard(
   if (pctEl) pctEl.textContent = `${pct}%`;
 }
 
+type VizMode = "musical" | "achievement";
+
 /**
- * Fixed third column: chord stats crossfade; instrumentation top-6 morphs per instrument
- * (each row slides from its rank on album A to its rank on album B while bar height blends).
+ * Fixed third column: Musical (chords + instrumentation morph) or Achievement (sales line + awards bars).
+ * Achievement charts include albums from the first era through the current viewport era only
+ * (scrolling back removes later albums from the charts).
  */
 export function attachVizDock(
   app: HTMLElement,
-  albums: AlbumBundle[]
+  albums: AlbumBundle[],
+  achievementByNumber: Map<number, AlbumAchievement>
 ): () => void {
   const dock = document.createElement("aside");
   dock.className = "viz-dock";
@@ -54,33 +67,110 @@ export function attachVizDock(
   dock.innerHTML = `
     <div class="viz-dock-panel col">
       <h2 class="col-title viz-dock-heading">Analysis</h2>
+      <div class="viz-dock-toolbar" role="tablist" aria-label="Analysis mode">
+        <button type="button" class="viz-dock-tab" role="tab" aria-selected="true" aria-controls="viz-panel-musical" id="viz-tab-musical" data-viz-mode="musical">Musical</button>
+        <button type="button" class="viz-dock-tab" role="tab" aria-selected="false" aria-controls="viz-panel-achievement" id="viz-tab-achievement" tabindex="-1" data-viz-mode="achievement">Achievement</button>
+      </div>
       <div class="viz-body viz-dock-body">
-        <div class="viz-dock-stack">
-          <div class="viz-blend-layer viz-blend-a"></div>
-          <div class="viz-blend-layer viz-blend-b"></div>
+        <div class="viz-mode-panel" data-viz-panel="musical" id="viz-panel-musical" role="tabpanel" aria-labelledby="viz-tab-musical">
+          <div class="viz-dock-stack">
+            <div class="viz-blend-layer viz-blend-a"></div>
+            <div class="viz-blend-layer viz-blend-b"></div>
+          </div>
+          <div class="viz-inst-section">
+            <h3 class="viz-section-title">Instrumentation (rank + share of summed track %)</h3>
+            <div class="inst-rank-viewport">
+              <div class="inst-rank-morph-root"></div>
+            </div>
+          </div>
         </div>
-        <div class="viz-inst-section">
-          <h3 class="viz-section-title">Instrumentation (rank + share of summed track %)</h3>
-          <div class="inst-rank-viewport">
-            <div class="inst-rank-morph-root"></div>
+        <div class="viz-mode-panel viz-mode-panel--hidden" data-viz-panel="achievement" id="viz-panel-achievement" role="tabpanel" aria-labelledby="viz-tab-achievement" hidden>
+          <div class="viz-ach-stack">
+            <section class="viz-ach-block" aria-label="Sales chart">
+              <h3 class="viz-section-title">Estimated worldwide sales</h3>
+              <div class="viz-ach-svg-host">
+                <div class="viz-ach-svg-slot" data-ach-sales></div>
+              </div>
+            </section>
+            <section class="viz-ach-block" aria-label="Awards chart">
+              <h3 class="viz-section-title">Grammy wins &amp; nominations</h3>
+              <div class="viz-ach-svg-host">
+                <div class="viz-ach-svg-slot" data-ach-awards></div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
     </div>`;
   app.appendChild(dock);
 
-  const layerA = dock.querySelector<HTMLElement>(".viz-blend-a")!;
-  const layerB = dock.querySelector<HTMLElement>(".viz-blend-b")!;
-  const morphRoot = dock.querySelector<HTMLElement>(".inst-rank-morph-root")!;
+  const musicalPanel = dock.querySelector<HTMLElement>("[data-viz-panel='musical']")!;
+  const achievementPanel = dock.querySelector<HTMLElement>("[data-viz-panel='achievement']")!;
+  const layerA = musicalPanel.querySelector<HTMLElement>(".viz-blend-a")!;
+  const layerB = musicalPanel.querySelector<HTMLElement>(".viz-blend-b")!;
+  const morphRoot = musicalPanel.querySelector<HTMLElement>(".inst-rank-morph-root")!;
+  const salesHost = achievementPanel.querySelector<HTMLElement>("[data-ach-sales]")!;
+  const awardsHost = achievementPanel.querySelector<HTMLElement>("[data-ach-awards]")!;
+  const tabMusical = dock.querySelector<HTMLButtonElement>("#viz-tab-musical")!;
+  const tabAchievement = dock.querySelector<HTMLButtonElement>("#viz-tab-achievement")!;
+
   const cardByName = new Map<string, HTMLElement>();
 
+  let mode: VizMode = "musical";
+  let lastAchPaintKey = "";
   let cachedA = -1;
   let cachedB = -1;
+
+  function setMode(next: VizMode): void {
+    if (next === mode) return;
+    mode = next;
+    const isMusical = mode === "musical";
+    tabMusical.setAttribute("aria-selected", isMusical ? "true" : "false");
+    tabAchievement.setAttribute("aria-selected", isMusical ? "false" : "true");
+    tabMusical.tabIndex = isMusical ? 0 : -1;
+    tabAchievement.tabIndex = isMusical ? -1 : 0;
+    musicalPanel.classList.toggle("viz-mode-panel--hidden", !isMusical);
+    achievementPanel.classList.toggle("viz-mode-panel--hidden", isMusical);
+    musicalPanel.toggleAttribute("hidden", !isMusical);
+    achievementPanel.toggleAttribute("hidden", isMusical);
+    if (!isMusical) lastAchPaintKey = "";
+  }
+
+  tabMusical.addEventListener("click", () => {
+    setMode("musical");
+    schedule();
+  });
+  tabAchievement.addEventListener("click", () => {
+    setMode("achievement");
+    schedule();
+  });
 
   let raf = 0;
   const tick = (): void => {
     raf = 0;
-    const blend = getVizScrollBlend(albums.length);
+    const throughEraInclusive = document.body.classList.contains("landing-past")
+      ? getEraIndexForViewportRef()
+      : -1;
+
+    if (mode === "achievement") {
+      const key = String(throughEraInclusive);
+      if (key !== lastAchPaintKey) {
+        lastAchPaintKey = key;
+        const pts = buildAchievementPaintPoints(
+          albums,
+          achievementByNumber,
+          throughEraInclusive
+        );
+        paintAchievementCharts(salesHost, awardsHost, pts);
+      }
+      return;
+    }
+
+    let blend = getVizScrollBlend(albums.length);
+    if (isViewportEraStuckOnDesktop()) {
+      const i = getEraIndexForViewportRef();
+      blend = { a: i, b: i, t: 0 };
+    }
     const { a, b, t } = blend;
 
     if (a !== cachedA || b !== cachedB) {
@@ -103,7 +193,9 @@ export function attachVizDock(
         ? instrumentationTopRankRows(albumA.instrumentWeights)
         : [];
       const rowsB =
-        albumB && a !== b ? instrumentationTopRankRows(albumB.instrumentWeights) : [];
+        albumB && a !== b
+          ? instrumentationTopRankRows(albumB.instrumentWeights)
+          : [];
 
       morphRoot.querySelectorAll(".viz-empty").forEach((n) => n.remove());
 
@@ -206,9 +298,15 @@ export function attachVizDock(
 
   window.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("resize", schedule, { passive: true });
+  const bodyClassMo = new MutationObserver(() => schedule());
+  bodyClassMo.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
   tick();
 
   return () => {
+    bodyClassMo.disconnect();
     window.removeEventListener("scroll", schedule);
     window.removeEventListener("resize", schedule);
     if (raf) cancelAnimationFrame(raf);

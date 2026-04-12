@@ -2,11 +2,22 @@
  * Scroll-linked differential motion: the album leaving the viewport lags slightly
  * (slower upward motion), while the one entering from below leads slightly (faster upward).
  * Symmetric behaviour when scrolling up.
+ *
+ * On desktop, parallax targets 0 while `.era-grid` sits near its sticky pin line so inner
+ * `transform` does not fight `position: sticky` (see `isEraGridNearStickyPin`).
  */
 
-const LAG_PX = 52;
-const PULL_PX = 40;
-const LERP = 0.22;
+import { isEraGridNearStickyPin } from "./scrollTheme";
+
+/** Stronger differential vs page scroll; `topEdgeGate` softens near the timeline / viewport top. */
+const LAG_PX = 46;
+const PULL_PX = 36;
+/** Lower = inner layer trails scroll more noticeably (more “lag / lead”). */
+const LERP = 0.26;
+/** Min distance (px) from viewport top at which parallax reaches full strength. */
+const TOP_EDGE_FADE_MIN_PX = 115;
+/** Also scale with viewport — wider handoff on tall screens. */
+const TOP_EDGE_FADE_VH_RATIO = 0.21;
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
@@ -39,45 +50,54 @@ export function attachEraParallax(): () => void {
     if (dir >= 0) {
       /* Scrolling down: previous block exits top → lag (+ty); next enters from bottom → pull (-ty). */
       if (r.top < 0 && r.bottom > 0) {
-        const u = smoothstep01(r.bottom / (vh * 0.4));
+        const u = smoothstep01(r.bottom / (vh * 0.36));
         ty += LAG_PX * u;
       }
-      if (r.top > 0 && r.top < vh * 0.88) {
-        const band = vh * 0.55;
+      if (r.top > 0 && r.top < vh * 0.92) {
+        const band = vh * 0.62;
         const u = smoothstep01(1 - r.top / band);
-        ty -= PULL_PX * u * u * clamp(1 - r.top / (vh * 0.92), 0, 1);
+        ty -= PULL_PX * u * u * clamp(1 - r.top / (vh * 0.94), 0, 1);
       }
     } else {
       /* Scrolling up: mirror — exiting bottom lags; entering from top pulls. */
-      if (r.bottom > vh && r.top < vh * 0.92) {
-        const u = smoothstep01((r.bottom - vh) / (vh * 0.38));
+      if (r.bottom > vh && r.top < vh * 0.94) {
+        const u = smoothstep01((r.bottom - vh) / (vh * 0.34));
         ty -= LAG_PX * u;
       }
-      if (r.top < 0 && r.bottom > 0 && r.bottom < vh * 0.72) {
-        const u = smoothstep01(r.bottom / (vh * 0.48));
+      if (r.top < 0 && r.bottom > 0 && r.bottom < vh * 0.78) {
+        const u = smoothstep01(r.bottom / (vh * 0.44));
         ty += PULL_PX * (1 - u) * (1 - u);
       }
     }
 
-    return clamp(ty, -PULL_PX * 1.15, LAG_PX * 1.15);
+    return clamp(ty, -PULL_PX * 1.12, LAG_PX * 1.12);
   }
 
   function tick(): void {
     raf = 0;
-    const vh = window.innerHeight;
     const sy = window.scrollY;
     const dy = sy - lastScrollY;
     if (Math.abs(dy) > 0.2) scrollDir = dy > 0 ? 1 : -1;
     lastScrollY = sy;
 
+    const vh = window.innerHeight;
     document.querySelectorAll<HTMLElement>(".era").forEach((sec) => {
       const inner = sec.querySelector<HTMLElement>(".era-parallax");
       if (!inner) return;
 
       const r = sec.getBoundingClientRect();
-      const target = targetOffset(r, vh, scrollDir);
+      let target = targetOffset(r, vh, scrollDir);
+      const topFadeSpan = Math.max(TOP_EDGE_FADE_MIN_PX, vh * TOP_EDGE_FADE_VH_RATIO);
+      const topEdgeGate = smoothstep01(Math.abs(r.top) / topFadeSpan);
+      target *= topEdgeGate;
+
+      /* Desktop sticky: child `transform` vs `position: sticky` causes subpixel bounce — ease out here. */
+      const grid = sec.querySelector<HTMLElement>(".era-grid");
+      if (isEraGridNearStickyPin(grid)) target = 0;
+
       const prev = tyByEl.get(inner) ?? 0;
-      const next = prev + (target - prev) * LERP;
+      let next = prev + (target - prev) * LERP;
+      if (Math.abs(next - target) < 0.4) next = target;
       tyByEl.set(inner, next);
       inner.style.transform = `translate3d(0, ${next.toFixed(2)}px, 0)`;
     });

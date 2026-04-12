@@ -131,6 +131,87 @@ function relativeLuminance(rgb: { r: number; g: number; b: number }): number {
   return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }
 
+type BlendSnapshot = {
+  gradientTop: string;
+  gradientBottom: string;
+  ui: Record<UIKey, string>;
+  line: string;
+  darkBlend: number;
+};
+
+function buildBlendSnapshot(
+  ta: AlbumThemeConfig,
+  tb: AlbumThemeConfig,
+  t: number
+): BlendSnapshot {
+  const k = smoothstep01(clamp(t, 0, 1));
+  const gradientTop = lerpCssColor(ta.gradientTop, tb.gradientTop, k);
+  const gradientBottom = lerpCssColor(ta.gradientBottom, tb.gradientBottom, k);
+  const pa = uiPalette(ta.darkMode);
+  const pb = uiPalette(tb.darkMode);
+  const ui = {} as Record<UIKey, string>;
+  for (const key of UI_KEYS) {
+    ui[key] = lerpCssColor(pa[key], pb[key], k);
+  }
+  const la = ta.darkMode ? LINE_DARK : LINE_LIGHT;
+  const lb = tb.darkMode ? LINE_DARK : LINE_LIGHT;
+  const line = lerpRgba(la, lb, k);
+  const darkA = ta.darkMode ? 1 : 0;
+  const darkB = tb.darkMode ? 1 : 0;
+  const darkBlend = darkA * (1 - k) + darkB * k;
+  return { gradientTop, gradientBottom, ui, line, darkBlend };
+}
+
+let defaultBlendSnapshotCache: BlendSnapshot | null = null;
+
+function getDefaultBlendSnapshot(): BlendSnapshot {
+  if (!defaultBlendSnapshotCache) {
+    defaultBlendSnapshotCache = buildBlendSnapshot(
+      DEFAULT_ALBUM_THEME,
+      DEFAULT_ALBUM_THEME,
+      0
+    );
+  }
+  return defaultBlendSnapshotCache;
+}
+
+/** Linear mix (for intro scroll); album↔album blend still uses smoothstep inside each snapshot. */
+function lerpBlendSnapshotLinear(a: BlendSnapshot, b: BlendSnapshot, u: number): BlendSnapshot {
+  const mu = clamp(u, 0, 1);
+  const ui = {} as Record<UIKey, string>;
+  for (const key of UI_KEYS) {
+    ui[key] = lerpCssColor(a.ui[key], b.ui[key], mu);
+  }
+  return {
+    gradientTop: lerpCssColor(a.gradientTop, b.gradientTop, mu),
+    gradientBottom: lerpCssColor(a.gradientBottom, b.gradientBottom, mu),
+    ui,
+    line: lerpRgba(a.line, b.line, mu),
+    darkBlend: a.darkBlend * (1 - mu) + b.darkBlend * mu,
+  };
+}
+
+function applyBlendSnapshot(s: BlendSnapshot): void {
+  const root = document.documentElement;
+  root.style.setProperty("--page-gradient-top", s.gradientTop);
+  root.style.setProperty("--page-gradient-bottom", s.gradientBottom);
+  for (const key of UI_KEYS) {
+    root.style.setProperty(key, s.ui[key]);
+  }
+  root.style.setProperty("--line", s.line);
+  root.dataset.iconInvert = s.darkBlend >= 0.5 ? "1" : "0";
+
+  const rt = probeRgb(s.gradientTop);
+  const rb = probeRgb(s.gradientBottom);
+  if (rt && rb) {
+    const lum = (relativeLuminance(rt) + relativeLuminance(rb)) / 2;
+    root.style.colorScheme = lum < 0.45 ? "dark" : "light";
+  }
+
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", s.gradientBottom);
+}
+
 /**
  * Apply blended visuals: gradient + all UI CSS variables.
  * `t` is scroll-linear 0 = A, 1 = B; internally eased with smoothstep for smooth color paths.
@@ -140,38 +221,22 @@ export function applyAlbumVisualBlend(
   tb: AlbumThemeConfig,
   t: number
 ): void {
-  const k = smoothstep01(clamp(t, 0, 1));
-  const root = document.documentElement;
+  applyBlendSnapshot(buildBlendSnapshot(ta, tb, t));
+}
 
-  const gt = lerpCssColor(ta.gradientTop, tb.gradientTop, k);
-  const gb = lerpCssColor(ta.gradientBottom, tb.gradientBottom, k);
-  root.style.setProperty("--page-gradient-top", gt);
-  root.style.setProperty("--page-gradient-bottom", gb);
-
-  const pa = uiPalette(ta.darkMode);
-  const pb = uiPalette(tb.darkMode);
-  for (const key of UI_KEYS) {
-    root.style.setProperty(key, lerpCssColor(pa[key], pb[key], k));
-  }
-
-  const la = ta.darkMode ? LINE_DARK : LINE_LIGHT;
-  const lb = tb.darkMode ? LINE_DARK : LINE_LIGHT;
-  root.style.setProperty("--line", lerpRgba(la, lb, k));
-
-  const darkA = ta.darkMode ? 1 : 0;
-  const darkB = tb.darkMode ? 1 : 0;
-  const darkBlend = darkA * (1 - k) + darkB * k;
-  root.dataset.iconInvert = darkBlend >= 0.5 ? "1" : "0";
-
-  const rt = probeRgb(gt);
-  const rb = probeRgb(gb);
-  if (rt && rb) {
-    const lum = (relativeLuminance(rt) + relativeLuminance(rb)) / 2;
-    root.style.colorScheme = lum < 0.45 ? "dark" : "light";
-  }
-
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", gb);
+/**
+ * Lerps from the default (intro) theme toward the scroll-based `ta`↔`tb` blend.
+ * `introMix` 0 = neutral landing; 1 = full scroll theme (same as `applyAlbumVisualBlend`).
+ */
+export function applyAlbumVisualBlendWithLandingIntro(
+  ta: AlbumThemeConfig,
+  tb: AlbumThemeConfig,
+  t: number,
+  introMix: number
+): void {
+  const def = getDefaultBlendSnapshot();
+  const full = buildBlendSnapshot(ta, tb, t);
+  applyBlendSnapshot(lerpBlendSnapshotLinear(def, full, introMix));
 }
 
 export async function loadAlbumThemes(): Promise<

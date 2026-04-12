@@ -3,16 +3,27 @@ import { createAlbumAudioController } from "./albumAudio";
 import { loadAlbumThemes, type AlbumThemeConfig } from "./albumThemes";
 import { attachEraParallax } from "./eraParallax";
 import { attachNarrativeFirstWheel } from "./narrativeFirstWheel";
-import { attachScrollThemeListeners } from "./scrollTheme";
+import { attachLandingHero, landingHeroHtml } from "./landingHero";
+import type { LandingCoverLayoutOverride } from "./landingCoverLayout";
+import { loadLandingCoverLayout } from "./landingCoverLayout";
+import {
+  attachScrollThemeListeners,
+  attachTimelineLayoutSync,
+  getEraIndexForViewportRef,
+  syncTimelineHeightCssVar,
+  updatePageGradientForScroll,
+} from "./scrollTheme";
 import { loadExperienceByAlbum } from "./experience";
 import {
   instrumentIconImgHtml,
   wireInstrumentIconFallbacks,
 } from "./instrumentIcons";
 import { buildAlbumsFromCsv } from "./tsDataCsv";
+import { parseAchievementCsv } from "./tsAchievementCsv";
 import type { AlbumBundle, SongEntry } from "./types";
 import { attachVizDock } from "./vizDock";
 import tsDataCsv from "../TS Data.csv?raw";
+import tsData02Csv from "../TS Data 02.csv?raw";
 /** Local files in `public/Album Covers/` named `1.JPG` … `12.JPG` (Album Number from CSV). */
 const LOCAL_COVER_MAX = 12;
 /** Matches `public/TS Music/{n}.mp3` (same numbering as album cover JPGs). */
@@ -196,7 +207,8 @@ function attachSongPopover(app: HTMLElement, albums: AlbumBundle[]): void {
 
 function buildApp(
   albums: AlbumBundle[],
-  themesByAlbum: Record<number, AlbumThemeConfig>
+  themesByAlbum: Record<number, AlbumThemeConfig>,
+  landingLayout: Record<string, LandingCoverLayoutOverride> = {}
 ): void {
   const app = document.querySelector<HTMLDivElement>("#app");
   if (!app) return;
@@ -226,6 +238,8 @@ function buildApp(
     .join("");
 
   app.innerHTML = `
+    ${landingHeroHtml(albums, albumCoverSrc, landingLayout)}
+    <div class="timeline-spacer" aria-hidden="true"></div>
     <header class="timeline">
       <nav aria-label="Album timeline">
         <ul class="timeline-track" role="list">${timelineHtml}</ul>
@@ -244,8 +258,8 @@ function buildApp(
           const cover = `<img src="${escapeHtml(coverSrc)}" alt="Cover: ${escapeHtml(album.albumName)}" loading="lazy" />`;
           return `
         <section class="era" data-era-index="${eraIndex}" id="era-section-${eraIndex}">
-          <div class="era-parallax">
           <div class="era-grid">
+            <div class="era-parallax">
             <div class="col col-album">
               <h2 class="col-title">${escapeHtml(album.albumName)}</h2>
               <div class="album-body">
@@ -259,7 +273,7 @@ function buildApp(
                 ${experienceColumnHtml(album)}
               </div>
             </div>
-          </div>
+            </div>
           </div>
         </section>`;
         })
@@ -285,6 +299,7 @@ function buildApp(
   function onVisibleEraIndex(idx: number): void {
     if (!Number.isFinite(idx)) return;
     setActiveEra(idx);
+    if (!document.body.classList.contains("landing-past")) return;
     const albumNum = albums[idx]?.albumNumber;
     if (albumNum != null) {
       albumAudio.crossfadeTo(albumNum);
@@ -317,10 +332,22 @@ function buildApp(
   });
 
   attachScrollThemeListeners(albums, themesByAlbum);
+  attachTimelineLayoutSync();
+  requestAnimationFrame(() => {
+    syncTimelineHeightCssVar();
+    requestAnimationFrame(() => syncTimelineHeightCssVar());
+  });
   attachNarrativeFirstWheel();
   attachEraParallax();
-  attachVizDock(app, albums);
-  onVisibleEraIndex(0);
+  attachVizDock(app, albums, parseAchievementCsv(tsData02Csv));
+
+  attachLandingHero(app, (past) => {
+    if (past) {
+      syncTimelineHeightCssVar();
+      onVisibleEraIndex(getEraIndexForViewportRef());
+      updatePageGradientForScroll(albums, themesByAlbum);
+    }
+  });
 
   const hint = document.createElement("div");
   hint.className = "audio-unlock-hint";
@@ -358,15 +385,16 @@ async function boot(): Promise<void> {
       app.innerHTML = `<div class="error">No albums parsed from TS Data.csv. Check column headers.</div>`;
       return;
     }
-    const [experienceByAlbum, themesByAlbum] = await Promise.all([
+    const [experienceByAlbum, themesByAlbum, landingLayout] = await Promise.all([
       loadExperienceByAlbum(),
       loadAlbumThemes(),
+      loadLandingCoverLayout(),
     ]);
     for (const a of albums) {
       const block = experienceByAlbum[a.albumNumber];
       if (block) a.experience = block;
     }
-    buildApp(albums, themesByAlbum);
+    buildApp(albums, themesByAlbum, landingLayout);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     app.innerHTML = `<div class="error">Could not load data: ${escapeHtml(msg)}</div>`;
