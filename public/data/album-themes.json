@@ -1,19 +1,26 @@
 {
-  "_comment": "Keys = Album Number from TS Data.csv. gradientTop/Bottom: CSS colors. darkMode: true = dark cards/text for dark gradients.",
+  "_comment": "Keys = Album Number from TS Data.csv. gradientTop/Bottom: CSS colors. darkMode: true = dark cards/text for dark gradients. Optional accent / accent2: hex/CSS for --accent / --accent2 (highlights); omit to use defaults for that darkMode.",
   "1": {
     "gradientTop": "#283C34",
     "gradientBottom": "#5493A3",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#FCFF5A",
+    "accent2": "#E2D700"
+    
   },
   "2": {
     "gradientTop": "#DEC177",
     "gradientBottom": "#E9E1D6",
-    "darkMode": false
+    "darkMode": false,
+    "accent": "#B34827",
+    "accent2": "#CC591F"
   },
   "3": {
     "gradientTop": "#D0242A",
-    "gradientBottom": "#E7C9C9",
-    "darkMode": true
+    "gradientBottom": "#BFA6A6",
+    "darkMode": true,
+    "accent": "#FFCEE2",
+    "accent2": "#FFAFBC"
   },
   "4": {
     "gradientTop": "#AD143D",
@@ -21,43 +28,59 @@
     "darkMode": true
   },
   "5": {
-    "gradientTop": "#EFCFAF",
-    "gradientBottom": "#907181",
-    "darkMode": false
+    "gradientTop": "#FFDEBC",
+    "gradientBottom": "#AE8E9F",
+    "darkMode": false,
+    "accent": "#7154F0",
+    "accent2": "#5538D5"
   },
   "6": {
     "gradientTop": "#000000",
     "gradientBottom": "#474747",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#FFDE3A",
+    "accent2": "#FFF426"
   },
   "7": {
-    "gradientTop": "#EAA5D1",
-    "gradientBottom": "#78BDDD",
-    "darkMode": false
+    "gradientTop": "#FFB2E3",
+    "gradientBottom": "#8FD8FB",
+    "darkMode": false,
+    "accent": "#0C4DFF",
+    "accent2": "#3B69E7"
   },
   "8": {
-    "gradientTop": "#E7E7E7",
-    "gradientBottom": "#727272",
-    "darkMode": false
+    "gradientTop": "#F0F0F0",
+    "gradientBottom": "#999999",
+    "darkMode": false,
+    "accent": "#958100",
+    "accent2": "#B6A638"
   },
   "9": {
     "gradientTop": "#9A897F",
     "gradientBottom": "#322129",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#FFA8A8",
+    "accent2": "#FF6E6E"
   },
   "10": {
-    "gradientTop": "#A1A1A1",
+    "gradientTop": "#949494",
     "gradientBottom": "#2E2136",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#FFDE3A",
+    "accent2": "#FFF426"
   },
   "11": {
     "gradientTop": "#312C28",
     "gradientBottom": "#7F7F7F",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#FFDE3A",
+    "accent2": "#FFF426"
   },
   "12": {
     "gradientTop": "#7DB99C",
     "gradientBottom": "#132115",
-    "darkMode": true
+    "darkMode": true,
+    "accent": "#EF3E1F",
+    "accent2": "#FF5C4A"
   }
 }

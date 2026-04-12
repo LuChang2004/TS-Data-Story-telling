@@ -2,6 +2,7 @@
  * Per-album page background (vertical gradient) + light/dark UI mode.
  *
  * Edit: `public/data/album-themes.json` — keys are CSV **Album Number** strings ("1" … "12").
+ * Optional `accent` / `accent2` set per-album `--accent` / `--accent2`; omit to use palette defaults for `darkMode`.
  *
  * UI tokens are driven entirely from JS (no `theme-album-dark` class) so light↔dark can
  * interpolate smoothly with scroll, same as the gradient.
@@ -10,6 +11,10 @@ export interface AlbumThemeConfig {
   gradientTop: string;
   gradientBottom: string;
   darkMode: boolean;
+  /** Overrides `--accent` when set (e.g. chart highlights, links). */
+  accent?: string;
+  /** Overrides `--accent2` when set (secondary highlight). */
+  accent2?: string;
 }
 
 export const DEFAULT_ALBUM_THEME: AlbumThemeConfig = {
@@ -55,6 +60,15 @@ const LINE_DARK = "rgba(255, 255, 255, 0.1)";
 
 function uiPalette(dark: boolean): Record<UIKey, string> {
   return dark ? PALETTE_DARK : PALETTE_LIGHT;
+}
+
+function uiPaletteForTheme(theme: AlbumThemeConfig): Record<UIKey, string> {
+  const base = uiPalette(theme.darkMode);
+  return {
+    ...base,
+    ...(theme.accent ? { "--accent": theme.accent } : {}),
+    ...(theme.accent2 ? { "--accent2": theme.accent2 } : {}),
+  };
 }
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -147,8 +161,8 @@ function buildBlendSnapshot(
   const k = smoothstep01(clamp(t, 0, 1));
   const gradientTop = lerpCssColor(ta.gradientTop, tb.gradientTop, k);
   const gradientBottom = lerpCssColor(ta.gradientBottom, tb.gradientBottom, k);
-  const pa = uiPalette(ta.darkMode);
-  const pb = uiPalette(tb.darkMode);
+  const pa = uiPaletteForTheme(ta);
+  const pb = uiPaletteForTheme(tb);
   const ui = {} as Record<UIKey, string>;
   for (const key of UI_KEYS) {
     ui[key] = lerpCssColor(pa[key], pb[key], k);
@@ -254,11 +268,18 @@ export async function loadAlbumThemes(): Promise<
       const gradientTop = String(o.gradientTop ?? "").trim();
       const gradientBottom = String(o.gradientBottom ?? "").trim();
       if (!gradientTop || !gradientBottom) continue;
-      out[n] = {
+      const accent =
+        typeof o.accent === "string" ? o.accent.trim() : "";
+      const accent2 =
+        typeof o.accent2 === "string" ? o.accent2.trim() : "";
+      const row: AlbumThemeConfig = {
         gradientTop,
         gradientBottom,
         darkMode: Boolean(o.darkMode),
       };
+      if (accent) row.accent = accent;
+      if (accent2) row.accent2 = accent2;
+      out[n] = row;
     }
     return out;
   } catch {

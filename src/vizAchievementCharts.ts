@@ -46,11 +46,11 @@ export function buildAchievementPaintPoints(
 const VB_W = 360;
 /** Taller viewBox so rotated album names fit inside the SVG (no clipping). */
 const VB_H = 192;
-const PAD_L = 38;
+const PAD_L = 4;
 const PAD_R = 8;
 const PAD_T = 10;
 /** Bottom margin: space below x-axis for tilted labels (not tied to viewBox bottom). */
-const PAD_B = 74;
+const PAD_B = 30;
 const X_LABEL_ROT = -22;
 
 function albumXLabelsHtml(
@@ -189,11 +189,11 @@ function awardsBarsSvg(points: AchievementPaintPoint[], animate: boolean): strin
     <line x1="${PAD_L}" y1="${y0}" x2="${VB_W - PAD_R}" y2="${y0}" />
   </g>
   <text class="viz-ach-axis" x="${VB_W - PAD_R}" y="${PAD_T + 5}" text-anchor="end">max ${maxY}</text>
-  <g class="viz-ach-legend" transform="translate(${PAD_L}, ${PAD_T - 2})">
+  <g class="viz-ach-legend" transform="translate(${PAD_L - 36}, ${PAD_T - 4})">
     <rect class="viz-ach-bar-wins" x="0" y="0" width="10" height="6" rx="1" />
-    <text class="viz-ach-legend-t" x="14" y="6">Wins</text>
-    <rect class="viz-ach-bar-noms" x="52" y="0" width="10" height="6" rx="1" />
-    <text class="viz-ach-legend-t" x="66" y="6">Noms</text>
+    <text class="viz-ach-legend-t" x="14" y="5.5">Wins</text>
+    <rect class="viz-ach-bar-noms" x="0" y="10" width="10" height="6" rx="1" />
+    <text class="viz-ach-legend-t" x="14" y="15.5">Noms</text>
   </g>
   ${groups.join("")}
   ${xLabels}
