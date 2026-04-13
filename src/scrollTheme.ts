@@ -1,8 +1,16 @@
 import {
+  applyAlbumThemeResolved,
   applyAlbumVisualBlendWithLandingIntro,
   resolveAlbumTheme,
   type AlbumThemeConfig,
 } from "./albumThemes";
+
+/** Past the last album: flat white page (closing epilogue). */
+const EPILOGUE_THEME: AlbumThemeConfig = {
+  gradientTop: "#ffffff",
+  gradientBottom: "#ffffff",
+  darkMode: false,
+};
 
 /** Viewport position (0 = top, 1 = bottom) used as the “focus” line for theme blending. */
 export const SCROLL_THEME_ANCHOR_RATIO = 0.38;
@@ -166,11 +174,19 @@ export function updatePageGradientForScroll(
   const introMix =
     typeof document !== "undefined" ? getLandingHeroThemeIntroMix() : 1;
 
+  const yRef = window.scrollY + window.innerHeight * SCROLL_THEME_ANCHOR_RATIO;
+  const closing = document.getElementById("closing-hero");
+  const inClosingEpilogue = Boolean(closing && yRef >= closing.offsetTop);
+  document.body.classList.toggle("closing-epilogue", inClosingEpilogue);
+
+  if (inClosingEpilogue) {
+    applyAlbumThemeResolved(EPILOGUE_THEME);
+    return;
+  }
+
   const secs = document.querySelectorAll<HTMLElement>(".era");
   const count = Math.min(secs.length, albums.length);
   if (count === 0) return;
-
-  const yRef = window.scrollY + window.innerHeight * SCROLL_THEME_ANCHOR_RATIO;
   const mids: number[] = [];
   for (let i = 0; i < count; i++) {
     const el = secs[i];

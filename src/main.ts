@@ -3,6 +3,7 @@ import { createAlbumAudioController } from "./albumAudio";
 import { loadAlbumThemes, type AlbumThemeConfig } from "./albumThemes";
 import { attachEraParallax } from "./eraParallax";
 import { attachNarrativeFirstWheel } from "./narrativeFirstWheel";
+import { attachClosingHero, closingHeroHtml } from "./closingHero";
 import { attachLandingHero, landingHeroHtml } from "./landingHero";
 import type { LandingCoverLayoutOverride } from "./landingCoverLayout";
 import { loadLandingCoverLayout } from "./landingCoverLayout";
@@ -18,9 +19,10 @@ import {
   instrumentIconImgHtml,
   wireInstrumentIconFallbacks,
 } from "./instrumentIcons";
+import { chordProgressionSegments } from "./aggregate";
 import { buildAlbumsFromCsv } from "./tsDataCsv";
 import { parseAchievementCsv } from "./tsAchievementCsv";
-import type { AlbumBundle, SongEntry } from "./types";
+import type { AlbumBundle, ExperienceImageItem, SongEntry } from "./types";
 import { attachVizDock } from "./vizDock";
 import tsDataCsv from "../TS Data.csv?raw";
 import tsData02Csv from "../TS Data 02.csv?raw";
@@ -69,24 +71,73 @@ function groupAlbumsByEraForTimeline(albums: AlbumBundle[]): {
   return groups;
 }
 
+function narrativeFigureHtml(
+  src: string,
+  caption?: string,
+  alt?: string
+): string {
+  const cap = caption
+    ? `<figcaption>${escapeHtml(caption)}</figcaption>`
+    : "";
+  return `<figure class="narrative-figure"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt ?? "")}" loading="lazy" />${cap}</figure>`;
+}
+
+function narrativeFigureStackHtml(items: ExperienceImageItem[]): string {
+  if (!items.length) return "";
+  const chunks: string[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const im = items[i];
+    if (im.layoutRowWithNext && i + 1 < items.length) {
+      const next = items[i + 1];
+      chunks.push(
+        `<div class="narrative-figure-row">${narrativeFigureHtml(im.src, im.caption, im.alt)}${narrativeFigureHtml(next.src, next.caption, next.alt)}</div>`
+      );
+      i += 1;
+    } else {
+      chunks.push(narrativeFigureHtml(im.src, im.caption, im.alt));
+    }
+  }
+  return `<div class="narrative-figure-stack">${chunks.join("")}</div>`;
+}
+
 function experienceColumnHtml(album: AlbumBundle): string {
   const ex = album.experience;
   const parts: string[] = [];
-  if (ex?.image?.src) {
-    const alt = escapeHtml(ex.image.alt ?? "");
-    const cap = ex.image.caption
-      ? `<figcaption>${escapeHtml(ex.image.caption)}</figcaption>`
-      : "";
-    parts.push(
-      `<figure class="narrative-figure"><img src="${escapeHtml(ex.image.src)}" alt="${alt}" loading="lazy" />${cap}</figure>`
+  const paras = ex?.paragraphs ?? [];
+  const imgs = ex?.images?.length ? ex.images : null;
+
+  if (imgs) {
+    const before = imgs.filter((i) => i.afterParagraph === -1);
+    if (before.length) parts.push(narrativeFigureStackHtml(before));
+
+    for (let pi = 0; pi < paras.length; pi++) {
+      parts.push(
+        `<p>${escapeHtml(paras[pi]).replace(/\n/g, "<br/>")}</p>`
+      );
+      const group = imgs.filter((i) => i.afterParagraph === pi);
+      if (group.length) parts.push(narrativeFigureStackHtml(group));
+    }
+
+    const tail = imgs.filter(
+      (i) =>
+        i.afterParagraph !== -1 &&
+        (i.afterParagraph === undefined ||
+          (typeof i.afterParagraph === "number" &&
+            i.afterParagraph >= paras.length))
     );
-  }
-  if (ex?.paragraphs?.length) {
-    for (const p of ex.paragraphs) {
+    if (tail.length) parts.push(narrativeFigureStackHtml(tail));
+  } else {
+    if (ex?.image?.src) {
+      parts.push(
+        narrativeFigureHtml(ex.image.src, ex.image.caption, ex.image.alt)
+      );
+    }
+    for (const p of paras) {
       parts.push(`<p>${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`);
     }
   }
-  if (!ex?.paragraphs?.length && !ex?.image) {
+
+  if (!paras.length && !imgs?.length && !ex?.image?.src) {
     parts.push(
       `<p class="viz-empty">Add Taylor’s journey copy (and optional images) in <code>public/data/experience.json</code>, using album number <strong>${album.albumNumber}</strong> as the JSON key.</p>`
     );
@@ -97,11 +148,14 @@ function experienceColumnHtml(album: AlbumBundle): string {
   return parts.join("");
 }
 
+function chordProgressionDdHtml(progression: string): string {
+  const segs = chordProgressionSegments(progression);
+  if (!segs.length) return "Unknown";
+  return segs.map((s) => escapeHtml(s)).join("<br/>");
+}
+
 function popoverHtml(album: AlbumBundle, song: SongEntry): string {
-  const chord =
-    song.chordProgression.trim() && !/^unknown$/i.test(song.chordProgression.trim())
-      ? escapeHtml(song.chordProgression.trim())
-      : "Unknown";
+  const chord = chordProgressionDdHtml(song.chordProgression);
   const key = escapeHtml(song.modeKey.trim() || "—");
   const inst = [...song.instrumentation].sort((a, b) => b.percent - a.percent);
   const instRows =
@@ -279,6 +333,7 @@ function buildApp(
         })
         .join("")}
     </main>
+    ${closingHeroHtml(albums, albumCoverSrc, landingLayout)}
   `;
 
   const buttons = [...app.querySelectorAll<HTMLButtonElement>(".timeline-item")];
@@ -348,6 +403,8 @@ function buildApp(
       updatePageGradientForScroll(albums, themesByAlbum);
     }
   });
+
+  attachClosingHero(app);
 
   const hint = document.createElement("div");
   hint.className = "audio-unlock-hint";

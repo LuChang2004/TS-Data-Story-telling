@@ -5,11 +5,10 @@
  * {
  *   "1": {
  *     "paragraphs": ["First paragraph.", "Second paragraph."],
- *     "image": {
- *       "src": "/experience/debut-photo.jpg",
- *       "caption": "Optional caption under the image.",
- *       "alt": "Short description for accessibility"
- *     }
+ *     "images": [
+ *       { "src": "/journey/1/01.jpg", "caption": "…", "alt": "…", "afterParagraph": 0 }
+ *     ]
+ * `afterParagraph` = index of the paragraph after which the image block is shown (`0` = after `paragraphs[0]`). Any number of `paragraphs` is allowed; after editing copy, run `npm run journey:sync` to re-score filenames against all paragraphs (sync copies **every** file in each `Pics for journey/NN` folder). Album **7 (Lover)** keeps the first four `images` entries’ captions, alts, and paragraph slots; extra files in `07/` are appended after those within each paragraph.
  *   },
  *   "2": { "paragraphs": ["..."] }
  * }
@@ -35,6 +34,25 @@ export async function loadExperienceByAlbum(): Promise<
       const paragraphs = Array.isArray(o.paragraphs)
         ? o.paragraphs.map(String).filter((p) => p.trim())
         : [];
+      const images: ExperienceBlock["images"] = [];
+      if (Array.isArray(o.images)) {
+        for (const raw of o.images) {
+          if (!raw || typeof raw !== "object") continue;
+          const im = raw as Record<string, unknown>;
+          const src = String(im.src ?? "").trim();
+          if (!src) continue;
+          const ap = im.afterParagraph;
+          images.push({
+            src,
+            caption: im.caption ? String(im.caption) : undefined,
+            alt: im.alt ? String(im.alt) : undefined,
+            afterParagraph:
+              typeof ap === "number" && Number.isFinite(ap) ? ap : undefined,
+            layoutRowWithNext: im.layoutRowWithNext === true ? true : undefined,
+          });
+        }
+      }
+
       let image: ExperienceBlock["image"];
       if (o.image && typeof o.image === "object" && o.image !== null) {
         const im = o.image as Record<string, unknown>;
@@ -47,8 +65,9 @@ export async function loadExperienceByAlbum(): Promise<
           };
         }
       }
-      if (paragraphs.length || image) {
-        out[n] = { paragraphs, image };
+
+      if (paragraphs.length || images.length || image) {
+        out[n] = { paragraphs, images: images.length ? images : undefined, image };
       }
     }
     return out;

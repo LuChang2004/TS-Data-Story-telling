@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "instruments:list": "tsx scripts/extract-instrument-names.ts",
     "instruments:top6": "tsx scripts/instruments-top6-scope.ts",
-    "instruments:translate-csv": "node scripts/translate-instrument-csv.mjs"
+    "instruments:translate-csv": "node scripts/translate-instrument-csv.mjs",
+    "journey:sync": "node scripts/sync-journey-images.mjs"
   },
   "devDependencies": {
     "tsx": "^4.19.3",

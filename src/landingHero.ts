@@ -2,6 +2,7 @@ import {
   resolveLandingCoverLayout,
   type LandingCoverLayoutOverride,
 } from "./landingCoverLayout";
+import { applyCoverScatterStyles, smoothstep01 } from "./landingScatter";
 import type { AlbumBundle } from "./types";
 
 function escapeAttr(s: string): string {
@@ -11,9 +12,23 @@ function escapeAttr(s: string): string {
     .replace(/</g, "&lt;");
 }
 
-function smoothstep01(t: number): number {
-  const x = Math.min(1, Math.max(0, t));
-  return x * x * (3 - 2 * x);
+/** Reusable cover `<img>` list (same layout JSON as landing). */
+export function buildLandingCoversImgTags(
+  albums: AlbumBundle[],
+  coverSrc: (albumNumber: number, albumName: string) => string,
+  layoutByAlbum: Record<string, LandingCoverLayoutOverride>,
+  imgClassName: string,
+  loading: "eager" | "lazy" = "lazy"
+): string {
+  const list = albums.slice(0, 12);
+  const loadAttr = loading === "eager" ? "eager" : "lazy";
+  return list
+    .map((a, i) => {
+      const src = coverSrc(a.albumNumber, a.albumName);
+      const L = resolveLandingCoverLayout(i, a.albumNumber, layoutByAlbum);
+      return `<img class="${escapeAttr(imgClassName)}" src="${escapeAttr(src)}" alt="" width="240" height="240" decoding="async" loading="${loadAttr}" data-album="${a.albumNumber}" data-ax="${L.ax.toFixed(4)}" data-ay="${L.ay.toFixed(4)}" data-rad="${L.rad.toFixed(4)}" data-rot="${L.rot.toFixed(1)}" data-sc="${L.sc.toFixed(3)}" data-z="${L.z}" />`;
+    })
+    .join("");
 }
 
 /**
@@ -24,14 +39,13 @@ export function landingHeroHtml(
   coverSrc: (albumNumber: number, albumName: string) => string,
   layoutByAlbum: Record<string, LandingCoverLayoutOverride> = {}
 ): string {
-  const list = albums.slice(0, 12);
-  const imgs = list
-    .map((a, i) => {
-      const src = coverSrc(a.albumNumber, a.albumName);
-      const L = resolveLandingCoverLayout(i, a.albumNumber, layoutByAlbum);
-      return `<img class="landing-cover" src="${escapeAttr(src)}" alt="" width="240" height="240" decoding="async" loading="eager" data-album="${a.albumNumber}" data-ax="${L.ax.toFixed(4)}" data-ay="${L.ay.toFixed(4)}" data-rad="${L.rad.toFixed(4)}" data-rot="${L.rot.toFixed(1)}" data-sc="${L.sc.toFixed(3)}" data-z="${L.z}" />`;
-    })
-    .join("");
+  const imgs = buildLandingCoversImgTags(
+    albums,
+    coverSrc,
+    layoutByAlbum,
+    "landing-cover",
+    "eager"
+  );
 
   return `
 <section class="landing-hero" id="landing-hero" aria-label="Introduction">
@@ -41,6 +55,9 @@ export function landingHeroHtml(
     <div class="landing-hero__content">
       <h1 class="landing-hero__title">Taylor Swift With Her Music</h1>
       <p class="landing-hero__sub">A data visualization of Taylor Swift’s career through her twelve major studio albums (through 2026).</p>
+      <div class="landing-hero__credit-row">
+        <p class="landing-hero__credit">By LucasLu</p>
+      </div>
     </div>
     <p class="landing-hero__hint">Scroll to explore</p>
   </div>
@@ -114,44 +131,7 @@ export function attachLandingHero(
       veil.style.opacity = String(0.55 + st * 0.2);
     }
 
-    const spread = st * Math.min(vw, vh) * 0.72;
-    /* st²: arc + spin ramp up mid-scroll so motion feels less “linear slide”. */
-    const st2 = st * st;
-
-    covers.forEach((img, idx) => {
-      const ax = parseFloat(img.dataset.ax ?? "0");
-      const ay = parseFloat(img.dataset.ay ?? "0");
-      const rad = parseFloat(img.dataset.rad ?? "0.2");
-      const rot = parseFloat(img.dataset.rot ?? "0");
-      const sc = parseFloat(img.dataset.sc ?? "0.6");
-      const z = parseInt(img.dataset.z ?? "3", 10);
-      const albumNum = parseInt(img.dataset.album ?? String(idx), 10) || idx + 1;
-
-      const baseX = ax * rad * vw * 0.85;
-      const baseY = ay * rad * vh * 0.78;
-
-      const spinSign = albumNum % 2 === 0 ? 1 : -1;
-      /* Perpendicular offset → slight arc instead of a straight radial line. */
-      const arcLean = spread * 0.11 * st2 * spinSign;
-      const px = -ay * arcLean;
-      const py = ax * arcLean;
-
-      const extraX = ax * spread + px;
-      const extraY = ay * spread + py;
-      const tx = baseX + extraX;
-      const ty = baseY + extraY;
-
-      /* Continuous rotation build-up while spreading (linear + quadratic in st). */
-      const rotDriftLinear = st * spinSign * (16 + (idx % 7) * 5);
-      const rotDriftQuad = st2 * spinSign * (22 + (albumNum % 5) * 4);
-      const rotTiltFromDir = st * (ax * 7 - ay * 5);
-      const rotExtra = rot + rotTiltFromDir + rotDriftLinear + rotDriftQuad;
-
-      const scEff = sc * (1 - st * 0.1);
-      img.style.zIndex = String(z);
-      img.style.opacity = String(Math.max(0.2, 1 - st * 0.38));
-      img.style.transform = `translate3d(calc(-50% + ${tx.toFixed(1)}px), calc(-50% + ${ty.toFixed(1)}px), 0) rotate(${rotExtra.toFixed(2)}deg) scale(${scEff.toFixed(4)})`;
-    });
+    applyCoverScatterStyles(covers, vw, vh, st);
 
     const nowPast = pastHero();
     if (nowPast !== lastPast) {
@@ -177,7 +157,7 @@ export function attachLandingHero(
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
       if (raf) cancelAnimationFrame(raf);
-      document.body.classList.remove("landing-past");
+      document.body.classList.remove("landing-past", "closing-epilogue");
     },
   };
 }

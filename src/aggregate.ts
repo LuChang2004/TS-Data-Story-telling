@@ -2,12 +2,20 @@ import type { CountRecord, SongEntry } from "./types";
 
 export type { CountRecord };
 
+/** One field may list several progressions separated by `;` — each counts separately in charts. */
+export function chordProgressionSegments(progression: string): string[] {
+  return progression
+    .split(";")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !/^unknown$/i.test(s));
+}
+
 export function chordCountsFromSongs(songs: SongEntry[]): CountRecord {
   const acc: CountRecord = {};
   for (const s of songs) {
-    const p = s.chordProgression.trim();
-    if (!p || /^unknown$/i.test(p)) continue;
-    acc[p] = (acc[p] ?? 0) + 1;
+    for (const seg of chordProgressionSegments(s.chordProgression)) {
+      acc[seg] = (acc[seg] ?? 0) + 1;
+    }
   }
   return acc;
 }

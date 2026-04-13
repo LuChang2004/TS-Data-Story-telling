@@ -183,8 +183,14 @@ body::before {
   position: relative;
   z-index: 2;
   text-align: center;
+  /* Stretch to sticky width so wide letter-spacing can’t shove the block off-screen */
+  align-self: stretch;
+  width: 100%;
   max-width: 36rem;
+  min-width: 0;
+  margin: 0 auto;
   padding: 0 1rem;
+  box-sizing: border-box;
   pointer-events: none;
 }
 
@@ -206,6 +212,45 @@ body::before {
   line-height: 1.55;
   color: var(--muted);
   font-weight: 500;
+}
+
+/* Byline: row scrolls when letter-spacing makes the line wider than the column. */
+.landing-hero__credit-row {
+  margin-top: 1.25rem;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: safe center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  pointer-events: auto;
+}
+
+.landing-hero__credit-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.landing-hero__credit-row::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border-radius: 4px;
+}
+
+/*
+ * Tune spacing once: `--ls` is both letter-spacing and end padding (cancels the extra
+ * gap after the last character so the line looks centered under the title).
+ */
+.landing-hero__credit {
+  --ls: 0.1em;
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: clamp(0.72rem, 0.9vw + 0.45rem, 0.88rem);
+  font-weight: 600;
+  letter-spacing: var(--ls);
+  padding-inline-end: var(--ls);
+  color: #ED68A4;
+  opacity: 0.88;
 }
 
 .landing-hero__hint {
@@ -232,6 +277,113 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .landing-cover {
+    will-change: auto;
+  }
+}
+
+/* --- Closing epilogue: white field, covers converge like the opening --- */
+.closing-hero {
+  position: relative;
+  z-index: 14;
+  height: 210vh;
+  min-height: 56rem;
+  margin: 0;
+  pointer-events: none;
+}
+
+.closing-hero__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 4rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.closing-hero__covers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.closing-cover {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: clamp(56px, 10.5vw, 130px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  transform-origin: center center;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.26),
+    0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent);
+  will-change: transform, opacity;
+}
+
+/* Same wash as `.landing-hero__veil`; opacity driven in JS like the intro. */
+.closing-hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 88% 72% at 50% 44%,
+    rgba(255, 255, 255, 0.58) 0%,
+    rgba(252, 250, 255, 0.28) 42%,
+    rgba(248, 245, 252, 0.06) 100%
+  );
+  opacity: 0.55;
+}
+
+.closing-hero__content {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  max-width: 28rem;
+  padding: 0 1.25rem;
+  pointer-events: none;
+}
+
+.closing-hero__gift {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 1.4vw + 0.65rem, 1.35rem);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.closing-hero__gift-main {
+  display: inline-block;
+}
+
+.closing-hero__byline {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: clamp(0.68rem, 1vw + 0.4rem, 0.88rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 1024px) {
+  .closing-hero {
+    height: 195vh;
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .closing-cover {
     will-change: auto;
   }
 }
@@ -278,6 +430,13 @@ body.landing-past .timeline {
   pointer-events: auto;
 }
 
+/* Bottom epilogue: tuck away fixed chrome (same scroll threshold as white theme). */
+body.landing-past.closing-epilogue .timeline {
+  opacity: 0;
+  transform: translateY(calc(-100% - 8px));
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .timeline {
     transition: opacity 0.4s ease;
@@ -286,6 +445,10 @@ body.landing-past .timeline {
 
   body.landing-past .timeline {
     transform: none;
+  }
+
+  body.landing-past.closing-epilogue .timeline {
+    transform: translateY(calc(-100% - 8px));
   }
 }
 
@@ -688,11 +851,35 @@ body.landing-past .timeline {
   opacity: 0.92;
 }
 
+.narrative-figure-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.narrative-figure-stack .narrative-figure {
+  margin: 0;
+}
+
+.narrative-figure-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.narrative-figure-row .narrative-figure {
+  margin: 0;
+  min-width: 0;
+}
+
 .narrative-figure {
   margin: 0 0 1rem;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--line);
+  border: none;
+  border-radius: 0;
+  overflow: visible;
   background: transparent;
 }
 
@@ -700,13 +887,15 @@ body.landing-past .timeline {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .narrative-figure figcaption {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.78rem;
+  margin: 0;
+  padding: 0.35rem 0 0;
+  font-size: 0.62rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
@@ -731,7 +920,10 @@ body.landing-past .timeline {
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--line);
-  box-shadow: none;
+  /* Soft lift: stronger below the cover so it reads as resting on the page */
+  box-shadow:
+    0 8px 32px -14px rgba(0, 0, 0, 0.3),
+    0 6px 16px -8px rgba(0, 0, 0, 0.2);
   background: transparent;
 }
 
@@ -1058,6 +1250,12 @@ body.landing-past .viz-dock {
   transform: translateY(0);
 }
 
+body.landing-past.closing-epilogue .viz-dock {
+  opacity: 0;
+  transform: translate3d(calc(100% + 2.5rem), 0, 0);
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .viz-dock {
     transition: opacity 0.4s ease;
@@ -1070,6 +1268,10 @@ body.landing-past .viz-dock {
 
   body.landing-past .viz-dock {
     transform: none;
+  }
+
+  body.landing-past.closing-epilogue .viz-dock {
+    transform: translate3d(calc(100% + 2.5rem), 0, 0);
   }
 }
 
