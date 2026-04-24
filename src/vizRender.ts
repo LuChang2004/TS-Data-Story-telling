@@ -119,7 +119,7 @@ export function renderInstrumentTopRankGridHtml(
 export function renderAlbumVizChordsHtml(album: AlbumBundle): string {
   return `
                 <div class="viz-chord-block">
-                  <h3 class="viz-section-title">Chord progressions (top ${VIZ_CHORD_SLOT_COUNT}, by track count)</h3>
+                  <h3 class="viz-section-title">CHORD PROGRESSION</h3>
                   <div class="chord-list chord-list--fixed">${renderChordBlockFixedRowsHtml(album.chordCounts)}</div>
                 </div>`;
 }

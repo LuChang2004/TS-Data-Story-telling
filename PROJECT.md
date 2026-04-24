@@ -22,7 +22,7 @@
 本项目表格中的**文字型事实与分类信息**，主要由作者使用 **Kimi** 等工具辅助检索、整理与汇总后写入 CSV；**并非**来自单一官方开放数据集。其中：
 
 - **和弦进行（Chord Progression）、调式/调性（Mode / Key）**：**一部分**由 AI 辅助调研、归纳后填入；**另一部分**由作者收听 **YouTube** 等公开音视频后**对照、核对并手动录入**。二者在整张表中混用，未在单元格层面逐条标注来源。
-- **乐器占比等结构化字段**：同样经 Kimi 辅助整理后进入 `TS Data.csv`，可视化前在代码侧做了格式统一与名称清洗。
+- **乐器占比等结构化字段**：同样经 Kimi 辅助整理后进入 `src/data/ts-data.csv`，可视化前在代码侧做了格式统一与名称清洗。
 
 **说明**：AI 生成或二手整理的音乐理论信息可能存在误差；YouTube 版本（现场、改编）也可能与录音室版不一致。本项目的图表展示的是**当前表格中的数据**，读者宜将其理解为「用于叙事与可视化的研究用数据集」，而非权威乐谱或官方标注。
 
@@ -30,8 +30,8 @@
 
 | 资源 | 路径 / 说明 |
 | --- | --- |
-| 专辑与曲目级音乐数据 | 根目录 `TS Data.csv`（上述方式整理后落盘的主表） |
-| 专辑级成就与背景 | `TS Data 02.csv`（销量、RIAA、格莱美、主单曲、制作人等，经 Kimi 等辅助整理） |
+| 专辑与曲目级音乐数据 | `src/data/ts-data.csv`（上述方式整理后落盘的主表） |
+| 专辑级成就与背景 | `src/data/ts-data-02.csv`（销量、RIAA、格莱美、主单曲、制作人等，经 Kimi 等辅助整理） |
 | 叙事文案与配图 | `public/data/experience.json`（按专辑编号 `1`…`12` 编写段落与可选图片） |
 | 页面视觉主题 | `public/data/album-themes.json`（每专渐变、`darkMode`、可选 `accent` / `accent2`） |
 | 落地页封面散落布局（可选） | `public/data/landing-cover-layout.json` |
@@ -39,12 +39,12 @@
 
 ### 数据结构（概要）
 
-`**TS Data.csv`**（一行一首歌）
+`**src/data/ts-data.csv`**（一行一首歌）
 
 - 专辑维度：`Album Number`、`Album Name`、`Release Date`、`Taylor's Musical Era`、专辑级乐器综述等。
 - 曲目维度：`Songs Included in Album`、`Song Chord Progressions`、`Song Modes/Keys`、`Song Instrumentation Types & Proportions`（含百分比文本，如 `AcousticGuitar(35%)`）。
 
-`**TS Data 02.csv`**（一行一张专辑）
+`**src/data/ts-data-02.csv`**（一行一张专辑）
 
 - 销量估计、RIAA、`Grammy_Wins` / `Grammy_Nominations`、`Key_Awards_Summary` 等，经解析后用于右侧 **Achievement** 模式下的折线与堆叠条形图。
 
@@ -59,7 +59,7 @@
 2. **规范化表头**：`tsDataCsv.ts` 将列名 slug 化，兼容 BOM 与轻微命名差异。
 3. **乐器字符串解析**：`instrumentNames.ts` 等将「乐器名 + 百分比」拆成结构化列表，并做名称清洗以便图标与汇总一致。
 4. **聚合**：在 `aggregate` 相关逻辑中从曲目汇总和弦频次、乐器权重，供和弦可视化与乐器排行条使用。
-5. **成就表**：`tsAchievementCsv.ts` 解析 `TS Data 02.csv`，映射为按专辑编号索引的结构，供 `vizAchievementCharts.ts` 绘制。
+5. **成就表**：`tsAchievementCsv.ts` 解析 `src/data/ts-data-02.csv`，映射为按专辑编号索引的结构，供 `vizAchievementCharts.ts` 绘制。
 
 数据更新时：优先改 CSV / JSON，再 `npm run build` 或本地 `npm run dev` 验证解析与图表是否正常。
 

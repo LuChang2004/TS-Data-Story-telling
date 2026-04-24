@@ -1,5 +1,5 @@
 /**
- * Copies **all** images from `Pics for journey/01` … `12` into `public/journey/{n}/`,
+ * Copies **all** images from `assets-src/pics-for-journey/01` … `12` into `public/journey/{n}/`,
  * scores filenames against every paragraph, assigns `afterParagraph` (with rebalance).
  *
  * **Lover (album 7):** keeps the first 4 entries from `experience.json` (caption, alt,
@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
-const PICS_ROOT = path.join(ROOT, "Pics for journey");
+const PICS_ROOT = path.join(ROOT, "assets-src", "pics-for-journey");
 const EXP_PATH = path.join(ROOT, "public", "data", "experience.json");
 const OUT_ROOT = path.join(ROOT, "public", "journey");
 

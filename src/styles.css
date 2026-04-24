@@ -18,10 +18,25 @@
   --col-album-w: 340px;
   --col-narrative-w: 590px;
   --viz-dock-w: 590px;
+  /* Fixed horizontal gap between the three columns (album ↔ narrative ↔ analysis). */
+  --col-gap: 20px;
+  /* Fixed distance from viewport right edge to the Analysis dock. */
+  --viz-dock-right: 1rem;
+  /* Total width of the 3-column desktop layout (including both gaps). */
+  --layout-3col-w: calc(
+    var(--col-album-w) + var(--col-gap) + var(--col-narrative-w) + var(--col-gap) +
+      var(--viz-dock-w)
+  );
+  /* Width of the alt dock (replaces col 2 + col 3). */
+  --alt-dock-w: calc(var(--col-narrative-w) + var(--col-gap) + var(--viz-dock-w));
+  /* Active fixed dock width (default = Analysis). */
+  --dock-w: var(--viz-dock-w);
+  /* Desktop side margin: centers 3 columns when viewport is wide enough. */
+  --page-pad-x: max(1rem, calc((100vw - var(--layout-3col-w)) / 2));
   /* Same visible height as fixed Analysis column (below timeline). */
   --analysis-dock-gap: 1rem;
   --analysis-panel-h: calc(100vh - var(--timeline-h) - var(--analysis-dock-gap));
-  --era-grid-gap: 1.25rem;
+  --era-grid-gap: var(--col-gap);
   --cover-size: 220px;
   --font-sans: "DM Sans", system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
@@ -680,9 +695,10 @@ body.landing-past.closing-epilogue .timeline {
   max-height: var(--analysis-panel-h);
   box-sizing: border-box;
   /* No padding-top: top edge aligns with fixed `.viz-dock` (Analysis outer top). */
-  padding: 0 calc(var(--viz-dock-w) + 1.75rem) var(--analysis-dock-gap) 1.25rem;
-  margin-left: 1.25rem;
-  margin-right: 0;
+  padding: 0 calc(var(--dock-w) + var(--col-gap) + var(--page-pad-x))
+    var(--analysis-dock-gap) 0;
+  margin-left: var(--page-pad-x);
+  margin-right: var(--page-pad-x);
   width: auto;
   max-width: 100%;
   display: flex;
@@ -696,10 +712,11 @@ body.landing-past.closing-epilogue .timeline {
   min-height: 0;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
+  /* Keep column widths stable so the visible gaps stay identical. */
+  grid-template-columns: var(--col-album-w) var(--col-narrative-w);
   gap: var(--era-grid-gap);
   align-items: stretch;
-  justify-items: start;
+  justify-items: stretch;
   /* Mobile: breathing room inside `.era-grid` padding. Desktop: must be 0 so col tops
      line up with fixed `.viz-dock-panel` (Analysis) — dock has no equivalent inset. */
   padding-top: 1.25rem;
@@ -716,25 +733,15 @@ body.landing-past.closing-epilogue .timeline {
   }
 }
 
-@media (min-width: 1650px) {
+@media (max-width: 1100px) {
   .era-parallax {
-    grid-template-columns: var(--col-album-w) var(--col-narrative-w);
-    width: max-content;
-    max-width: min(
-      100%,
-      calc(
-        var(--col-album-w) + var(--era-grid-gap) + var(--col-narrative-w) +
-          1.75rem + var(--viz-dock-w) + 2.5rem
-      )
-    );
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 1fr);
   }
 }
 
 @media (max-width: 1200px) {
   .era-grid {
-    margin-left: 1rem;
-    margin-right: 1rem;
-    padding-right: calc(var(--viz-dock-w) + 1rem);
+    --page-pad-x: 1rem;
   }
 }
 
@@ -1224,7 +1231,7 @@ body.landing-past.closing-epilogue .timeline {
   position: fixed;
   z-index: 12;
   top: var(--timeline-h);
-  right: 1rem;
+  right: var(--page-pad-x);
   width: var(--viz-dock-w);
   height: var(--analysis-panel-h);
   max-height: var(--analysis-panel-h);
@@ -1239,6 +1246,287 @@ body.landing-past.closing-epilogue .timeline {
     transform 1.12s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Floating top-right mode switch */
+.floating-mode-toggle {
+  position: fixed;
+  top: max(0.4rem, calc(var(--timeline-h) - 0.9rem));
+  right: max(0.25rem, calc(var(--page-pad-x) - 1.4rem));
+  z-index: 50;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.floating-mode-toggle.is-on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.floating-mode-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Hide switch on landing and ending sections. */
+body:not(.landing-past) .floating-mode-toggle,
+body.landing-past.closing-epilogue .floating-mode-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+}
+
+/* Alt mode: replace column 2 + 3 with a single fixed dock */
+body.alt-mode {
+  --dock-w: var(--alt-dock-w);
+}
+body.alt-mode .viz-dock {
+  display: none;
+}
+body.alt-mode .col-narrative {
+  display: none;
+}
+body.alt-mode .era-parallax {
+  grid-template-columns: var(--col-album-w);
+}
+
+.alt-dock {
+  position: fixed;
+  z-index: 12;
+  top: var(--timeline-h);
+  right: var(--page-pad-x);
+  width: var(--alt-dock-w);
+  height: var(--analysis-panel-h);
+  max-height: var(--analysis-panel-h);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translate3d(24px, 0, 0) scale(0.985);
+  pointer-events: none;
+  transition:
+    opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+body:not(.alt-mode) .alt-dock {
+  visibility: hidden;
+}
+body.alt-mode .alt-dock {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+body.alt-mode:not(.landing-past) .alt-dock {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+body.alt-mode.landing-past.closing-epilogue .alt-dock {
+  opacity: 0;
+  transform: translate3d(calc(100% + 2.5rem), 0, 0);
+  pointer-events: none;
+}
+.alt-dock-panel {
+  pointer-events: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.col-narrative,
+.viz-dock {
+  transition:
+    opacity 280ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Keep glow visible across full alt panel, including title row. */
+body.alt-mode .alt-dock-panel {
+  background: radial-gradient(
+    920px 520px at 50% 42%,
+    color-mix(in srgb, var(--accent) 11%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 6%, transparent) 34%,
+    transparent 56%
+  );
+}
+.alt-dock-body {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.alt-dock-stack {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  border: 1px dashed color-mix(in srgb, var(--line) 55%, transparent);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Alt chart: SVG projection route (replaces CSS 3D axis route). */
+.alt-chart-host {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  background: transparent;
+}
+.alt-chart-host:active {
+  cursor: grabbing;
+}
+.alt-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.alt-chart-svg .axis {
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  opacity: 0.88;
+  stroke: color-mix(in srgb, var(--text) 72%, transparent);
+}
+.alt-chart-svg .axis-origin {
+  fill: color-mix(in srgb, var(--text) 72%, transparent);
+}
+.alt-chart-svg .axis-label {
+  fill: color-mix(in srgb, var(--text) 86%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  dominant-baseline: auto;
+  text-anchor: middle;
+  user-select: none;
+  pointer-events: none;
+}
+.alt-chart-svg .alt-pt {
+  rx: 1.7;
+  ry: 1.7;
+}
+.alt-chart-svg .alt-proj-layer {
+  pointer-events: none;
+}
+.alt-chart-svg .axis-proj {
+  stroke: color-mix(in srgb, var(--text) 64%, transparent);
+  stroke-width: 1.05;
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+.alt-chart-svg .axis-proj-dot {
+  fill: color-mix(in srgb, var(--text) 74%, transparent);
+}
+.alt-tooltip {
+  position: absolute;
+  z-index: 30;
+  min-width: 180px;
+  max-width: min(340px, 60%);
+  border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--text);
+  padding: 0.42rem 0.55rem;
+  pointer-events: none;
+  backdrop-filter: blur(10px) saturate(1.06);
+  -webkit-backdrop-filter: blur(10px) saturate(1.06);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.14);
+}
+.alt-tooltip-song {
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.alt-tooltip-album {
+  margin-top: 0.15rem;
+  font-size: 0.69rem;
+  color: var(--muted);
+}
+.alt-tooltip-dims {
+  margin-top: 0.28rem;
+  font-size: 0.67rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.col-album .col-title,
+.col-narrative .col-title,
+.viz-dock-panel > .col-title,
+.alt-dock-panel > .col-title {
+  margin: 0;
+  flex-shrink: 0;
+  position: relative;
+  border-bottom: none;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.alt-dock-panel > .col-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  background: transparent;
+  pointer-events: none;
+}
+
+.col-album .col-title::before,
+.col-narrative .col-title::before,
+.viz-dock-panel > .col-title::before,
+.alt-dock-panel > .col-title::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    rgba(0, 0, 0, 0.62) 38%,
+    rgba(0, 0, 0, 0.22) 68%,
+    transparent 100%
+  );
+}
+
+.alt-dock-panel > .col-title::before {
+  content: none;
+}
+
+@media (max-width: 1024px) {
+  /* Alt dock only exists on desktop layout */
+  body.alt-mode .alt-dock {
+    display: none;
+  }
+  body.alt-mode .viz-dock {
+    display: flex;
+  }
+  body.alt-mode .col-narrative {
+    display: flex;
+  }
+  body.alt-mode {
+    --dock-w: var(--viz-dock-w);
+  }
+  .floating-mode-toggle {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
 body:not(.landing-past) .viz-dock {
   opacity: 0;
   transform: translateY(14px);
@@ -1248,6 +1536,7 @@ body:not(.landing-past) .viz-dock {
 body.landing-past .viz-dock {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 body.landing-past.closing-epilogue .viz-dock {
@@ -1628,6 +1917,32 @@ body.landing-past.closing-epilogue .viz-dock {
   min-height: 2px;
 }
 
+@keyframes vizInstBarGrowIn {
+  from {
+    transform: scaleY(0);
+    opacity: 0.22;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.inst-rank-morph-root.is-entering .inst-card-rank-morph .inst-bar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: vizInstBarGrowIn 0.52s cubic-bezier(0.24, 1.02, 0.34, 1) both;
+  animation-delay: calc(var(--inst-i, 0) * 36ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inst-rank-morph-root.is-entering .inst-card-rank-morph .inst-bar {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 .viz-dock .inst-card-rank-morph.inst-card-rank {
   width: calc(100% / 6);
   min-width: 0;
@@ -1718,10 +2033,15 @@ body.landing-past.closing-epilogue .viz-dock {
   max-height: min(72vh, 520px);
   overflow: auto;
   padding: 1rem 1.1rem 1.1rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--text) 75%, transparent);
+  border: none;
   border-radius: var(--radius);
-  box-shadow: 0 20px 50px rgba(26, 22, 40, 0.15);
+  color: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.46),
+    0 6px 16px rgba(0, 0, 0, 0.34);
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.18s ease, transform 0.18s ease;
@@ -1747,15 +2067,15 @@ body.landing-past.closing-epilogue .viz-dock {
 .song-popover-sub {
   margin: 0.25rem 0 0;
   font-size: 0.8rem;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--surface) 72%, transparent);
 }
 
 .song-popover-facts {
   margin: 0 0 0.75rem;
   padding: 0.65rem 0.75rem;
-  background: var(--surface2);
+  background: color-mix(in srgb, var(--surface) 10%, transparent);
   border-radius: 10px;
-  border: 1px solid var(--line);
+  border: none;
   display: grid;
   gap: 0.5rem;
 }
@@ -1771,13 +2091,13 @@ body.landing-past.closing-epilogue .viz-dock {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--surface) 68%, transparent);
 }
 
 .song-popover-facts dd {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--text);
+  color: var(--surface);
 }
 
 .song-popover-section {
@@ -1786,7 +2106,7 @@ body.landing-past.closing-epilogue .viz-dock {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 
 .pop-inst-row {
@@ -1809,6 +2129,7 @@ body.landing-past.closing-epilogue .viz-dock {
 .pop-inst-icon .inst-icon-img {
   width: 22px;
   height: 22px;
+  filter: invert(1);
 }
 
 .pop-inst-meta {
@@ -1817,7 +2138,7 @@ body.landing-past.closing-epilogue .viz-dock {
 
 .pop-inst-name {
   font-size: 0.78rem;
-  color: var(--text);
+  color: var(--surface);
   margin-bottom: 0.2rem;
   word-break: break-word;
 }
@@ -1827,20 +2148,37 @@ body.landing-past.closing-epilogue .viz-dock {
   background: transparent;
   border-radius: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: none;
 }
 
 .pop-inst-bar {
   height: 100%;
   border-radius: 0;
-  background: var(--text);
+  background: var(--surface);
   opacity: 0.72;
 }
 
 .pop-inst-pct {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--surface) 72%, transparent);
   font-variant-numeric: tabular-nums;
+}
+
+.song-popover-lyrics {
+  max-height: none;
+  overflow: visible;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 9%, transparent);
+}
+
+.song-popover-lyrics-text {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--surface);
+  white-space: normal;
 }
 
 .audio-unlock-hint {

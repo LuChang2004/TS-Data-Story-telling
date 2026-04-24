@@ -1,6 +1,8 @@
 import Papa from "papaparse";
 import { chordCountsFromSongs, instrumentWeightsFromSongs } from "./aggregate";
 import { parseInstrumentationString } from "./instrumentNames";
+import { createLyricsNarrativeLookup } from "./lyricsNarrative";
+import type { SpotifyMetaLookup } from "./spotifyMeta";
 import type { AlbumBundle, SongEntry } from "./types";
 
 export { parseInstrumentationString } from "./instrumentNames";
@@ -24,8 +26,13 @@ function cell(row: RawRow, ...keys: string[]): string {
   return "";
 }
 
-export function buildAlbumsFromCsv(csvText: string): AlbumBundle[] {
+export function buildAlbumsFromCsv(
+  csvText: string,
+  lyricsCsvText: string = "",
+  spotifyLookup?: SpotifyMetaLookup
+): AlbumBundle[] {
   const text = csvText.charCodeAt(0) === 0xfeff ? csvText.slice(1) : csvText;
+  const lyricsLookup = createLyricsNarrativeLookup(lyricsCsvText);
   const parsed = Papa.parse<RawRow>(text, {
     header: true,
     skipEmptyLines: true,
@@ -78,11 +85,24 @@ export function buildAlbumsFromCsv(csvText: string): AlbumBundle[] {
     if (eraLabel) bucket.eraLabel = eraLabel;
     if (albumInstr) bucket.albumInstr = albumInstr;
 
+    const title = songTitle || `Track ${bucket.songs.length + 1}`;
+    const albumForLookup = albumName || bucket.albumName || `Album ${num}`;
+    const spotifyMeta = spotifyLookup?.getMeta(albumForLookup, title);
+
     bucket.songs.push({
-      title: songTitle || `Track ${bucket.songs.length + 1}`,
+      title,
       chordProgression: chord,
       modeKey: modeKey || "—",
       instrumentation: parseInstrumentationString(songInstrRaw),
+      lyrics: lyricsLookup.getLyrics(albumForLookup, title),
+      selfFictionScore: lyricsLookup.getScore(
+        albumForLookup,
+        title
+      ),
+      tempoBpm: spotifyMeta?.tempoBpm,
+      keyPitchClass: spotifyMeta?.keyPitchClass,
+      keyTonic: spotifyMeta?.keyTonic,
+      calmIntenseScore: spotifyMeta?.calmIntenseScore,
     });
   }
 

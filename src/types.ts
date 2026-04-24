@@ -30,6 +30,18 @@ export interface SongEntry {
   modeKey: string;
   /** Instrument `name` strings: cleaned via `instrumentNames.ts` when parsed from CSV. */
   instrumentation: { name: string; percent: number }[];
+  /** Full lyrics text (from Genius dataset) when available. */
+  lyrics?: string;
+  /** -1 = self-focused narrative, +1 = fictional/third-person narrative. */
+  selfFictionScore?: number;
+  /** Spotify tempo in BPM. */
+  tempoBpm?: number;
+  /** Pitch class 0..11 (C..B). */
+  keyPitchClass?: number;
+  /** Tonic label resolved from `keyPitchClass` (C, C#, ... B). */
+  keyTonic?: string;
+  /** -1 = calm, +1 = intense, mapped from tempo. */
+  calmIntenseScore?: number;
 }
 
 export interface AlbumBundle {

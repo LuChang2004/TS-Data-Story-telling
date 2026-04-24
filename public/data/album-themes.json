@@ -1,5 +1,5 @@
 {
-  "_comment": "Keys = Album Number from TS Data.csv. gradientTop/Bottom: CSS colors. darkMode: true = dark cards/text for dark gradients. Optional accent / accent2: hex/CSS for --accent / --accent2 (highlights); omit to use defaults for that darkMode.",
+  "_comment": "Keys = Album Number from src/data/ts-data.csv. gradientTop/Bottom: CSS colors. darkMode: true = dark cards/text for dark gradients. Optional accent / accent2: hex/CSS for --accent / --accent2 (highlights); omit to use defaults for that darkMode.",
   "1": {
     "gradientTop": "#283C34",
     "gradientBottom": "#5493A3",

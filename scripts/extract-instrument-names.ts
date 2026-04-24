@@ -1,5 +1,5 @@
 /**
- * Regenerates `public/instrument-icons/INSTRUMENT_NAMES.txt` from `TS Data.csv`
+ * Regenerates `public/instrument-icons/INSTRUMENT_NAMES.txt` from `src/data/ts-data.csv`
  * using `parseInstrumentationString` from `src/instrumentNames.ts` (single source of truth).
  */
 import fs from "node:fs";
@@ -9,7 +9,7 @@ import Papa from "papaparse";
 import { parseInstrumentationString } from "../src/instrumentNames";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const csvPath = path.join(root, "TS Data.csv");
+const csvPath = path.join(root, "src", "data", "ts-data.csv");
 const outDir = path.join(root, "public", "instrument-icons");
 const outFile = path.join(outDir, "INSTRUMENT_NAMES.txt");
 
@@ -23,7 +23,7 @@ function slugHeader(h: string): string {
 }
 
 if (!fs.existsSync(csvPath)) {
-  console.error("Missing TS Data.csv at project root:", csvPath);
+  console.error("Missing ts-data.csv at src/data:", csvPath);
   process.exit(1);
 }
 
@@ -45,7 +45,7 @@ for (const row of parsed.data) {
 const sorted = [...set].sort((a, b) => a.localeCompare(b, "en"));
 fs.mkdirSync(outDir, { recursive: true });
 const header = `# Canonical instrument names (after cleaning). One per line.
-# Source: TS Data.csv → src/instrumentNames.ts → parseInstrumentationString
+# Source: src/data/ts-data.csv → src/instrumentNames.ts → parseInstrumentationString
 # PNG: public/instrument-icons/{encodeURIComponent(name)}.png
 # Regenerate: npm run instruments:list
 `;

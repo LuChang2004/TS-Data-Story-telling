@@ -39,7 +39,7 @@ function parseGrammy(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Album-level stats from `TS Data 02.csv` (key = album number). */
+/** Album-level stats from `src/data/ts-data-02.csv` (key = album number). */
 export function parseAchievementCsv(csvText: string): Map<number, AlbumAchievement> {
   const text = csvText.charCodeAt(0) === 0xfeff ? csvText.slice(1) : csvText;
   const parsed = Papa.parse<RawRow>(text, {

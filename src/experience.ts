@@ -8,7 +8,7 @@
  *     "images": [
  *       { "src": "/journey/1/01.jpg", "caption": "…", "alt": "…", "afterParagraph": 0 }
  *     ]
- * `afterParagraph` = index of the paragraph after which the image block is shown (`0` = after `paragraphs[0]`). Any number of `paragraphs` is allowed; after editing copy, run `npm run journey:sync` to re-score filenames against all paragraphs (sync copies **every** file in each `Pics for journey/NN` folder). Album **7 (Lover)** keeps the first four `images` entries’ captions, alts, and paragraph slots; extra files in `07/` are appended after those within each paragraph.
+ * `afterParagraph` = index of the paragraph after which the image block is shown (`0` = after `paragraphs[0]`). Any number of `paragraphs` is allowed; after editing copy, run `npm run journey:sync` to re-score filenames against all paragraphs (sync copies **every** file in each `assets-src/pics-for-journey/NN` folder). Album **7 (Lover)** keeps the first four `images` entries’ captions, alts, and paragraph slots; extra files in `07/` are appended after those within each paragraph.
  *   },
  *   "2": { "paragraphs": ["..."] }
  * }

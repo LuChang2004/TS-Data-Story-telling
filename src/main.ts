@@ -8,6 +8,7 @@ import { attachLandingHero, landingHeroHtml } from "./landingHero";
 import type { LandingCoverLayoutOverride } from "./landingCoverLayout";
 import { loadLandingCoverLayout } from "./landingCoverLayout";
 import {
+  SCROLL_THEME_ANCHOR_RATIO,
   attachScrollThemeListeners,
   attachTimelineLayoutSync,
   getEraIndexForViewportRef,
@@ -24,8 +25,12 @@ import { buildAlbumsFromCsv } from "./tsDataCsv";
 import { parseAchievementCsv } from "./tsAchievementCsv";
 import type { AlbumBundle, ExperienceImageItem, SongEntry } from "./types";
 import { attachVizDock } from "./vizDock";
-import tsDataCsv from "../TS Data.csv?raw";
-import tsData02Csv from "../TS Data 02.csv?raw";
+import { attachAltDock } from "./altDock";
+import { createSpotifyMetaLookupFromWorkbook } from "./spotifyMeta";
+import tsDataCsv from "./data/ts-data.csv?raw";
+import tsData02Csv from "./data/ts-data-02.csv?raw";
+import geniusLyricsCsv from "../Data/Taylor_Swift_Genius_Data.csv?raw";
+import spotifyDataXlsxUrl from "../Data/Taylor_Swift_Spotify_Data.xlsx?url";
 /** Local files in `public/Album Covers/` named `1.JPG` … `12.JPG` (Album Number from CSV). */
 const LOCAL_COVER_MAX = 12;
 /** Matches `public/TS Music/{n}.mp3` (same numbering as album cover JPGs). */
@@ -154,9 +159,21 @@ function chordProgressionDdHtml(progression: string): string {
   return segs.map((s) => escapeHtml(s)).join("<br/>");
 }
 
+function lyricsHtml(rawLyrics?: string): string {
+  const raw = String(rawLyrics ?? "").trim();
+  if (!raw) return `<p class="viz-empty">No lyrics found for this track.</p>`;
+  const cleaned = raw
+    .replace(/you might also like/gi, "")
+    .replace(/\s{2,}/g, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return `<p class="song-popover-lyrics-text">${escapeHtml(cleaned).replace(/\n/g, "<br/>")}</p>`;
+}
+
 function popoverHtml(album: AlbumBundle, song: SongEntry): string {
   const chord = chordProgressionDdHtml(song.chordProgression);
-  const key = escapeHtml(song.modeKey.trim() || "—");
+  const spotifyKey = song.keyTonic ? escapeHtml(song.keyTonic) : "";
+  const key = spotifyKey || escapeHtml(song.modeKey.trim() || "—");
   const inst = [...song.instrumentation].sort((a, b) => b.percent - a.percent);
   const instRows =
     inst.length > 0
@@ -182,10 +199,12 @@ function popoverHtml(album: AlbumBundle, song: SongEntry): string {
     </header>
     <dl class="song-popover-facts">
       <div><dt>Chord progression</dt><dd>${chord}</dd></div>
-      <div><dt>Mode / key</dt><dd>${key}</dd></div>
+      <div><dt>Key</dt><dd>${key}</dd></div>
     </dl>
     <h4 class="song-popover-section">Instrumentation</h4>
     <div class="song-popover-inst">${instRows}</div>
+    <h4 class="song-popover-section">Lyrics</h4>
+    <div class="song-popover-lyrics">${lyricsHtml(song.lyrics)}</div>
   `;
 }
 
@@ -379,9 +398,14 @@ function buildApp(
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = Number(btn.dataset.eraIndex);
-      document.getElementById(`era-section-${idx}`)?.scrollIntoView({
+      const sec = document.getElementById(`era-section-${idx}`);
+      if (!sec) return;
+      const top = sec.getBoundingClientRect().top + window.scrollY;
+      const targetY =
+        top + sec.offsetHeight * 0.5 - window.innerHeight * SCROLL_THEME_ANCHOR_RATIO;
+      window.scrollTo({
+        top: Math.max(0, targetY),
         behavior: "smooth",
-        block: "start",
       });
     });
   });
@@ -395,6 +419,27 @@ function buildApp(
   attachNarrativeFirstWheel();
   attachEraParallax();
   attachVizDock(app, albums, parseAchievementCsv(tsData02Csv));
+  attachAltDock(app, albums, themesByAlbum);
+
+  // Floating mode toggle (does not affect layout).
+  const modeBtn = document.createElement("button");
+  modeBtn.className = "floating-mode-toggle";
+  modeBtn.type = "button";
+  modeBtn.setAttribute("aria-pressed", "false");
+  modeBtn.setAttribute("aria-label", "Toggle alternate panel");
+  modeBtn.textContent = "Song Map";
+  const syncModeBtn = (): void => {
+    const on = document.body.classList.contains("alt-mode");
+    modeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    modeBtn.classList.toggle("is-on", on);
+    modeBtn.textContent = on ? "Analysis" : "Song Map";
+  };
+  modeBtn.addEventListener("click", () => {
+    document.body.classList.toggle("alt-mode");
+    syncModeBtn();
+  });
+  document.body.appendChild(modeBtn);
+  syncModeBtn();
 
   attachLandingHero(app, (past) => {
     if (past) {
@@ -437,9 +482,20 @@ async function boot(): Promise<void> {
   const app = document.querySelector("#app");
   if (!app) return;
   try {
-    const albums = buildAlbumsFromCsv(tsDataCsv);
+    let spotifyLookup = undefined;
+    try {
+      const spotifyRes = await fetch(spotifyDataXlsxUrl, { cache: "force-cache" });
+      if (spotifyRes.ok) {
+        const workbook = await spotifyRes.arrayBuffer();
+        spotifyLookup = createSpotifyMetaLookupFromWorkbook(workbook);
+      }
+    } catch {
+      spotifyLookup = undefined;
+    }
+
+    const albums = buildAlbumsFromCsv(tsDataCsv, geniusLyricsCsv, spotifyLookup);
     if (!albums.length) {
-      app.innerHTML = `<div class="error">No albums parsed from TS Data.csv. Check column headers.</div>`;
+      app.innerHTML = `<div class="error">No albums parsed from ts-data.csv. Check column headers.</div>`;
       return;
     }
     const [experienceByAlbum, themesByAlbum, landingLayout] = await Promise.all([

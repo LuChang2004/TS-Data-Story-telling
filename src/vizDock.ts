@@ -78,7 +78,7 @@ export function attachVizDock(
             <div class="viz-blend-layer viz-blend-b"></div>
           </div>
           <div class="viz-inst-section">
-            <h3 class="viz-section-title">Instrumentation (rank + share of summed track %)</h3>
+            <h3 class="viz-section-title">INSTRUMENTATION</h3>
             <div class="inst-rank-viewport">
               <div class="inst-rank-morph-root"></div>
             </div>
@@ -120,9 +120,24 @@ export function attachVizDock(
   let lastAchPaintKey = "";
   let cachedA = -1;
   let cachedB = -1;
+  let instEnterAnimTimer = 0;
+
+  const playInstrumentationEnterAnimation = (): void => {
+    morphRoot.classList.remove("is-entering");
+    void morphRoot.offsetWidth;
+    morphRoot.classList.add("is-entering");
+    if (instEnterAnimTimer) {
+      window.clearTimeout(instEnterAnimTimer);
+    }
+    instEnterAnimTimer = window.setTimeout(() => {
+      morphRoot.classList.remove("is-entering");
+      instEnterAnimTimer = 0;
+    }, 620);
+  };
 
   function setMode(next: VizMode): void {
     if (next === mode) return;
+    const prev = mode;
     mode = next;
     const isMusical = mode === "musical";
     tabMusical.setAttribute("aria-selected", isMusical ? "true" : "false");
@@ -134,6 +149,9 @@ export function attachVizDock(
     musicalPanel.toggleAttribute("hidden", !isMusical);
     achievementPanel.toggleAttribute("hidden", isMusical);
     if (!isMusical) lastAchPaintKey = "";
+    if (prev === "achievement" && isMusical) {
+      playInstrumentationEnterAnimation();
+    }
   }
 
   tabMusical.addEventListener("click", () => {
@@ -288,6 +306,7 @@ export function attachVizDock(
       }
 
       applyMorphCard(el, col, opacity, ratio);
+      el.style.setProperty("--inst-i", String(Math.max(0, Math.round(col))));
     }
   };
 
@@ -309,6 +328,7 @@ export function attachVizDock(
     bodyClassMo.disconnect();
     window.removeEventListener("scroll", schedule);
     window.removeEventListener("resize", schedule);
+    if (instEnterAnimTimer) window.clearTimeout(instEnterAnimTimer);
     if (raf) cancelAnimationFrame(raf);
     dock.remove();
   };

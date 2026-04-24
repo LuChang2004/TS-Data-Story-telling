@@ -1,7 +1,7 @@
 /**
  * Numbered PNGs in `public/instruments-icons/` (Ins-01 … Ins-14).
  * Order must match `public/instrument-icons/INSTRUMENT_NAMES_TOP6.txt` / `npm run instruments:top6`.
- * Copy files from your `Instruments Icons` folder into `public/instruments-icons/` using these names.
+ * Copy files from `assets-src/instruments-icons/` into `public/instruments-icons/` using these names.
  */
 export const NUMBERED_INSTRUMENT_ICON_ORDER = [
   "AcousticGuitar",

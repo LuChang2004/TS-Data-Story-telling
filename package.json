@@ -18,6 +18,7 @@
     "vite": "^6.2.0"
   },
   "dependencies": {
-    "papaparse": "^5.5.2"
+    "papaparse": "^5.5.2",
+    "xlsx": "^0.18.5"
   }
 }

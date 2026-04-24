@@ -1,6 +1,6 @@
 /**
  * One-shot / repeatable: replace Chinese (and mixed CN/EN) instrumentation labels in
- * `TS Data.csv` with English PascalCase-style names (consistent with AcousticGuitar, etc.).
+ * `src/data/ts-data.csv` with English PascalCase-style names (consistent with AcousticGuitar, etc.).
  *
  * Token tables: `scripts/instrument-translation-data.mjs`
  * Parsing after edit: `src/instrumentNames.ts`
@@ -18,7 +18,7 @@ import {
 } from "./instrument-translation-data.mjs";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const csvPath = path.join(root, "TS Data.csv");
+const csvPath = path.join(root, "src", "data", "ts-data.csv");
 
 function slugHeader(h) {
   return h

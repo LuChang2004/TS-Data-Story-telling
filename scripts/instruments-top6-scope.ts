@@ -13,7 +13,7 @@ import { buildAlbumsFromCsv } from "../src/tsDataCsv";
 import { VIZ_INSTRUMENT_RANK_SHOW } from "../src/vizRender";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const csvPath = path.join(root, "TS Data.csv");
+const csvPath = path.join(root, "src", "data", "ts-data.csv");
 const outFile = path.join(
   root,
   "public",

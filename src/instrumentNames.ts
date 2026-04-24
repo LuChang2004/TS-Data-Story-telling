@@ -1,7 +1,7 @@
 /**
  * 乐器名（instrument labels）— 全流程入口
  *
- * - **数据源**：项目根目录 `TS Data.csv`
+ * - **数据源**：`src/data/ts-data.csv`
  *   - 列 `song_instrumentation_types_proportions`：单曲占比，格式如 `AcousticGuitar(35%)、Drums(20%)`
  *   - 列 `album_instrumentation_types_proportions`：专辑级说明（自由文本，不经本模块解析为结构化列表）
  * - **解析**：`parseInstrumentationString` → 每条 `{ name, percent }`，`name` 经 `cleanInstrumentName`
