@@ -15,9 +15,9 @@
   --timeline-heading-h: 2.75rem;
   --timeline-axis-y: calc(0.35rem + var(--timeline-heading-h) + 0.2rem + 4px);
   /* Main grid + fixed Analysis column (2nd & 3rd ~ same width). */
-  --col-album-w: 340px;
-  --col-narrative-w: 590px;
-  --viz-dock-w: 590px;
+  --col-album-w: clamp(280px, 20vw, 340px);
+  --col-narrative-w: clamp(360px, 31vw, 590px);
+  --viz-dock-w: clamp(360px, 31vw, 590px);
   /* Fixed horizontal gap between the three columns (album ↔ narrative ↔ analysis). */
   --col-gap: 20px;
   /* Fixed distance from viewport right edge to the Analysis dock. */
