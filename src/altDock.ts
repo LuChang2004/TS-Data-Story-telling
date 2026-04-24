@@ -296,8 +296,8 @@ export function attachAltDock(
     const w = Math.max(100, rect.width);
     const h = Math.max(100, rect.height);
     const cx = w * 0.5;
-    // Keep chart slightly upper-centered within the visible region.
-    const cy = h * 0.46;
+    // Move chart center slightly downward within the visible region.
+    const cy = h * 0.5;
     // Slightly shrink the full 3D footprint for a less crowded look.
     const scale = Math.min(w, h) * 0.27;
     const depth = 440;
